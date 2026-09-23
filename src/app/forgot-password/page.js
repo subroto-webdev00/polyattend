@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="auth-page">
-      <style>{`
+      <style> jsx{`
         @keyframes fpFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
         .fp-anim { animation: fpFadeUp .5s cubic-bezier(.16,1,.3,1) both; }
         .fp-submit { position: relative; overflow: hidden; }
