@@ -10,3 +10,7 @@ node_modules/
 # See the note in SETUP.md about rotating this secret and moving it to
 # .env.local only.
 README.md
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
