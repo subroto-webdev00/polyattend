@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">PolyAttend</string>
-    <string name="title_activity_main">PolyAttend</string>
-    <string name="package_name">com.subroto.polyattend</string>
-    <string name="custom_url_scheme">com.subroto.polyattend</string>
-</resources>

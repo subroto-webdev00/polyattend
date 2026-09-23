@@ -1,9 +1,0 @@
-{
-  "appId": "com.subroto.polyattend",
-  "appName": "PolyAttend",
-  "webDir": "public",
-  "server": {
-    "url": "https://polyattend-system2026.vercel.app",
-    "cleartext": false
-  }
-}
