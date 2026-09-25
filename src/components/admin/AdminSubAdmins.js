@@ -5,7 +5,7 @@ import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
-import { formatDepartment } from '@/lib/display';
+import { formatDepartment, formatShift } from '@/lib/display';
 
 const SHIFT_OPTIONS = [
   { value: '1st', label: '🌅 Morning Shift' },
@@ -206,6 +206,10 @@ function SubAdminCard({ person, index, onToggle, onDelete, busy }) {
 }
 
 function PendingInviteCard({ invite, index, onCancel, cancelling }) {
+  const department = invite.department || invite.departmentId;
+  const departmentLabel = formatDepartment(department, invite.departmentCode);
+  const shiftLabel = formatShift(invite.shift);
+
   return (
     <div className="pi-card" style={{ animationDelay: `${index * 60}ms` }}>
       <div className="pi-top">
@@ -219,7 +223,8 @@ function PendingInviteCard({ invite, index, onCancel, cancelling }) {
         <span className="pi-badge-waiting">
           <span className="pi-blink" /> Registration Pending
         </span>
-        {(invite.departmentId || invite.department) && <span className="pi-badge-dept">{formatDepartment(invite.departmentId || invite.department, invite.departmentCode)}</span>}
+        {departmentLabel && <span className="pi-badge-dept"><Icon name="department" size={11} />{departmentLabel}</span>}
+        {shiftLabel && <span className="pi-badge-shift"><Icon name="clock" size={11} />{shiftLabel} Shift</span>}
       </div>
 
       <button className="pi-cancel" onClick={() => onCancel(invite)} disabled={cancelling}>
@@ -284,7 +289,11 @@ function PendingInviteCard({ invite, index, onCancel, cancelling }) {
           background: rgba(217, 119, 6, 0.12);
           color: #d97706;
         }
-        .pi-badge-dept {
+        .pi-badge-dept,
+        .pi-badge-shift {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
           font-size: 10.5px;
           font-weight: 600;
           color: var(--txt2);

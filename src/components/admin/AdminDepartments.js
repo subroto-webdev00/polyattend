@@ -15,7 +15,9 @@ export default function AdminDepartments() {
 
   const load = () => {
     setLoading(true);
-    api.get('/departments').then(r => setDepts(r.data.departments || [])).finally(() => setLoading(false));
+    api.get('/departments')
+      .then(r => setDepts((r.data.departments || []).map(d => ({ ...d, _id: d.id || d._id }))))
+      .finally(() => setLoading(false));
   };
   useEffect(load, []);
 
