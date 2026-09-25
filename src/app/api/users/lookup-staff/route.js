@@ -7,10 +7,44 @@ export async function GET(request) {
   if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get('q')?.trim();
-    const role = searchParams.get('role');
+    const q = (searchParams.get('q') || searchParams.get('name'))?.trim();
+    const requestedRole = searchParams.get('role');
+    const staffRoles = ['teacher', 'subAdmin', 'semesterAdmin', 'admin'];
+    const roleFilter = staffRoles.includes(requestedRole)
+      ? requestedRole
+      : { in: staffRoles };
     if (!q) return NextResponse.json({ success: false, message: 'q is required' }, { status: 400 });
-    const users = await prisma.user.findMany({ where: { role: role || 'teacher', isActive: true, OR: [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }] }, select: { id: true, name: true, email: true, role: true, departmentId: true, shift: true }, take: 10 });
-    return NextResponse.json({ success: true, users });
+
+    const where = {
+      role: roleFilter,
+      isActive: true,
+      OR: [
+        { name: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+      ],
+    };
+
+    // Non-admin users may only search staff inside their own scope.
+    if (auth.user.role !== 'admin') {
+      where.departmentId = auth.user.departmentId;
+      where.shift = auth.user.shift;
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true, name: true, email: true, role: true, mobile: true,
+        departmentId: true, departmentCode: true, shift: true,
+        department: { select: { id: true, name: true, code: true } },
+      },
+      take: 10,
+    });
+
+    const staff = users.map(user => ({
+      ...user,
+      _id: user.id,
+      departmentId: user.department || user.departmentId,
+    }));
+    return NextResponse.json({ success: true, staff });
   } catch (error) { return errorResponse(error); }
 }

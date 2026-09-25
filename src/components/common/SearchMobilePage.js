@@ -234,7 +234,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
             {staffResults && staffResults.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
                 {staffResults.map(person => (
-                  <div className="smb-result" key={person._id} style={{ marginTop: 0 }}>
+                  <div className="smb-result" key={person.id || person._id} style={{ marginTop: 0 }}>
                     <div className="smb-avatar">{(person.name || '?').trim().charAt(0).toUpperCase()}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="smb-name">{person.name}</div>

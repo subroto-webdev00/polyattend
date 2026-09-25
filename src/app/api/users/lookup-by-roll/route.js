@@ -12,7 +12,7 @@ export async function GET(request) {
     const student = await prisma.user.findFirst({
       where: { studentId: roll, role: 'student', registered: true },
       select: {
-        id: true, name: true, studentId: true, email: true, semester: true,
+        id: true, name: true, studentId: true, email: true, mobile: true, semester: true,
         section: true, shift: true, departmentId: true, departmentCode: true,
         department: { select: { id: true, name: true, code: true } },
       },
