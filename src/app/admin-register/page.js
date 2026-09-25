@@ -21,9 +21,9 @@ function getPasswordStrength(pw) {
   return { label: 'Strong Password', color: '#22c55e', width: '100%' };
 }
 
-// Used by Sub Admin, Semester Admin, and Teacher to complete registration
+// Used by Department Admin, Semester Admin, and Teacher to complete registration
 // after they receive a 12-digit invite code by email from the admin above
-// them (Super Admin → Sub Admin, Sub Admin → Semester Admin, Semester
+// them (Admin → Department Admin, Department Admin → Semester Admin, Semester
 // Admin → Teacher). They only need to supply Email + Code + Password —
 // name, department, shift, semester, subject etc. were already fixed by
 // whoever sent the invite.
@@ -78,7 +78,7 @@ function AdminRegisterPageInner() {
           <div className="auth-logo-icon"><Icon name="lock" size={28} /></div>
           <h1 className="auth-title">Admin Registration</h1>
           <p className="auth-sub">
-            Sub Admin / Semester Admin / Teacher — complete registration with the Code sent to your email
+            Department Admin / Semester Admin / Teacher — complete registration with the Code sent to your email
           </p>
         </div>
 

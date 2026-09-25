@@ -5,7 +5,7 @@ import Icon from './Icon';
 
 // Two search modes:
 //   - "Student" (by Roll) — the original behaviour, unchanged.
-//   - "Staff" (by Name) — Teachers, and for Super Admin also Sub Admin /
+//   - "Staff" (by Name) — Teachers, and for Admin also Department Admin /
 //     Semester Admin / other Admin accounts. Not shown to Teacher role
 //     (their layout never links here with canStaffSearch — see the
 //     `canStaffSearch` prop passed from each role's page).
@@ -56,7 +56,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
     }
   };
 
-  const roleLabel = { teacher: 'Teacher', subAdmin: 'Sub Admin', semesterAdmin: 'Semester Admin', admin: 'Super Admin' };
+  const roleLabel = { teacher: 'Teacher', subAdmin: 'Department Admin', semesterAdmin: 'Semester Admin', admin: 'Admin' };
 
   return (
     <div className="page">
@@ -136,7 +136,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
 
       <div className="page-header" style={{ marginBottom: 24 }}>
         <h2 className="page-title" style={{ fontSize: 22, fontWeight: 800, color: 'var(--txt)' }}>
-          Search Mobile Number
+          Search Profile
         </h2>
         <p style={{ color: 'var(--txt2)', fontSize: 13, marginTop: 3 }}>
           Look up a Mobile Number by Student Roll, or by Teacher/Admin name

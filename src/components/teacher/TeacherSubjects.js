@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
-
-const SHIFT_LABEL = { '1st': 'Morning', '2nd': 'Day' };
+import { formatDepartment, formatShift } from '@/lib/display';
 
 // View-only: a Teacher can be assigned multiple Subjects (across
 // different Semesters/Groups, even different Shifts) by one or more
@@ -57,10 +56,10 @@ export default function TeacherSubjects() {
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                <span className="tag tag-blue" style={{ fontSize: 10 }}>{s.departmentId?.code || s.departmentId?.name}</span>
+                <span className="tag tag-blue" style={{ fontSize: 10 }}>{formatDepartment(s.departmentId, s.departmentCode)}</span>
                 <span className="tag tag-green" style={{ fontSize: 10 }}>Sem {s.semester}</span>
                 <span className="tag tag-amber" style={{ fontSize: 10 }}>Group {s.section}</span>
-                {s.shift && <span className="tag tag-purple" style={{ fontSize: 10 }}>{SHIFT_LABEL[s.shift] || s.shift} Shift</span>}
+                {s.shift && <span className="tag tag-purple" style={{ fontSize: 10 }}>{formatShift(s.shift)} Shift</span>}
               </div>
             </div>
           ))}

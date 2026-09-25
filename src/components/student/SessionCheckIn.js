@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import { toast } from 'react-hot-toast';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 // PERFORMANCE: this polls every Student's dashboard for an active session.
 // At small scale 8s was fine, but with enrollment in the thousands, every
@@ -89,12 +90,12 @@ export default function SessionCheckIn() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>
             {isActive
-              ? `${session.subjectId?.name || 'Class'} is ongoing`
+              ? `${formatSubject(session.subjectId)} is ongoing`
               : 'Attendance'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--txt2)' }}>
             {isActive
-              ? `${session.subjectId?.code || ''} • ${session.teacherId?.name || 'Teacher'}`
+              ? `${formatDepartment(session.departmentId)} • ${formatShift(session.shift || session.subjectId?.shift)} Shift • ${session.teacherId?.name || 'Teacher'}`
               : 'No class session is running right now'}
           </div>
         </div>

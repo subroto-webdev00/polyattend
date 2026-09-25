@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/context/AuthContext';
+import { formatDepartment, formatShift } from '@/lib/display';
 import {
   DashboardPage, DashboardLoading, DashboardHero, DashboardClock,
-  StatGrid, StatCard, getGreeting,
+  StatGrid, StatCard, SubjectOverview, getGreeting,
 } from '@/components/common/DashboardKit';
 
 /* ------------------------------------------------------------------ */
@@ -13,11 +14,10 @@ import {
 /*  to match Teacher Dashboard's dark theme via the shared DashboardKit.*/
 /* ------------------------------------------------------------------ */
 
-const SHIFT_LABEL = { '1st': 'Morning Shift', '2nd': 'Day Shift' };
-
 export default function SemesterAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ teachers: 0, students: 0, pendingStudents: 0 });
+  const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
 
@@ -42,13 +42,17 @@ export default function SemesterAdminDashboard() {
       api.get('/users', { params: { role: 'teacher', countOnly: true } }),
       api.get('/users', { params: { role: 'student', countOnly: true } }),
       Promise.all(allowedSemesters.map(sem => api.get('/semesterAdmin/students', { params: { semester: sem } }))),
-    ]).then(([t, st, preResults]) => {
+       api.get('/subjects').catch(() => ({ data: { subjects: [] } })),
+    ]).then(([t, st, preResults, subs]) => {
       const pendingCount = preResults.reduce((sum, r) => sum + (r.data.entries || []).filter(e => !e.used).length, 0);
       setStats({
         teachers: t.data.count || 0,
         students: st.data.count || 0,
         pendingStudents: pendingCount,
       });
+      setSubjects(subs.data.subjects || []);
+    }).catch((error) => {
+      console.error('Could not load Semester Admin dashboard', error);
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -57,8 +61,8 @@ export default function SemesterAdminDashboard() {
   const greeting = getGreeting(now);
   const grantedSemesters = user?.semesters && user.semesters.length ? user.semesters : (user?.semester ? [user.semester] : []);
   const badges = [
-    user?.departmentId?.name || user?.departmentCode,
-    SHIFT_LABEL[user?.shift] || user?.shift,
+    formatDepartment(user?.departmentId, user?.departmentCode),
+    formatShift(user?.shift) ? `${formatShift(user.shift)} Shift` : '',
     ...grantedSemesters.map(sem => `Semester ${sem}`),
   ].filter(Boolean);
 
@@ -78,6 +82,8 @@ export default function SemesterAdminDashboard() {
         <StatCard index={1} icon="users" label="Student" value={stats.students} accent="amber" />
         <StatCard index={2} icon="clipboard" label="Pending Validation" value={stats.pendingStudents} accent="blue" />
       </StatGrid>
+
+      <SubjectOverview subjects={subjects} title="My Scope Subjects" limit={6} />
     </DashboardPage>
   );
 }

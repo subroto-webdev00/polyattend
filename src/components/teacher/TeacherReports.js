@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api, { getBlobErrorMessage } from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 export default function TeacherReports() {
   const [subjects, setSubjects] = useState([]);
@@ -26,7 +27,8 @@ export default function TeacherReports() {
     return subjects.filter(s =>
       s.name?.toLowerCase().includes(q) ||
       s.code?.toLowerCase().includes(q) ||
-      s.departmentId?.name?.toLowerCase().includes(q)
+      s.departmentId?.name?.toLowerCase().includes(q) ||
+      s.departmentId?.code?.toLowerCase().includes(q)
     );
   }, [subjects, subjectSearch]);
 
@@ -116,7 +118,7 @@ export default function TeacherReports() {
                   <div key={s._id} className="subject-card" onClick={() => loadReport(s)}>
                     <div className="subject-code">{s.code}</div>
                     <div className="subject-name">{s.name}</div>
-                    <div className="subject-meta">{s.departmentId?.name} • Sem {s.semester} • Group {s.section}</div>
+                    <div className="subject-meta">{formatDepartment(s.departmentId, s.departmentCode)} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift</div>
                     <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--info)', fontSize: 13, fontWeight: 600 }}>
                       <Icon name="eye" size={14} /> View Report
                     </div>
@@ -133,8 +135,8 @@ export default function TeacherReports() {
               <Icon name="chevronLeft" size={14} /> Back
             </button>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600 }}>{selectedSubject.name} ({selectedSubject.code})</div>
-              <div style={{ fontSize: 12, color: 'var(--txt2)' }}>{selectedSubject.departmentId?.name} • Sem {selectedSubject.semester} • Group {selectedSubject.section}</div>
+              <div style={{ fontWeight: 600 }}>{formatSubject(selectedSubject)}</div>
+              <div style={{ fontSize: 12, color: 'var(--txt2)' }}>{formatDepartment(selectedSubject.departmentId, selectedSubject.departmentCode)} • Sem {selectedSubject.semester} • Group {selectedSubject.section} • {formatShift(selectedSubject.shift)} Shift</div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn-secondary btn-sm" onClick={() => downloadSubjectReport(selectedSubject._id, 'excel')}>

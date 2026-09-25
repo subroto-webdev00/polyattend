@@ -12,6 +12,13 @@ export async function GET(request, { params }) {
       include: { student: { select: { id:true, name:true, studentId:true, section:true } } },
       orderBy: { student: { name: 'asc' } }
     });
-    return NextResponse.json({ success: true, count: attendance.length, attendance });
+    const normalized = attendance.map(record => ({
+      ...record,
+      _id: record.id,
+      studentId: record.student
+        ? { ...record.student, _id: record.student.id }
+        : record.studentId,
+    }));
+    return NextResponse.json({ success: true, count: normalized.length, attendance: normalized });
   } catch (error) { return errorResponse(error); }
 }

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api, { getBlobErrorMessage } from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 import toast from 'react-hot-toast';
 
 // ── FIX (grouping request): wherever a Section is shown in a list, group the
@@ -137,7 +138,8 @@ export default function AdminReports() {
     return subjects.filter(s =>
       s.name?.toLowerCase().includes(q) ||
       s.code?.toLowerCase().includes(q) ||
-      s.departmentId?.name?.toLowerCase().includes(q)
+      s.departmentId?.name?.toLowerCase().includes(q) ||
+      s.departmentId?.code?.toLowerCase().includes(q)
     );
   }, [subjects, subjectSearch]);
 
@@ -190,8 +192,8 @@ export default function AdminReports() {
                   <div key={s._id} className="list-item">
                     <div className="item-icon icon-green"><Icon name="book" size={18} /></div>
                     <div className="item-content">
-                      <div className="item-title">{s.name} ({s.code})</div>
-                      <div className="item-sub">{s.departmentId?.name} • Sem {s.semester} • Group {s.section}</div>
+                      <div className="item-title">{formatSubject(s)}</div>
+                      <div className="item-sub">{formatDepartment(s.departmentId, s.departmentCode)} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift</div>
                     </div>
                     <DownloadButtons id={s._id} endpoint={`/reports/subject/${s._id}`} baseName={`subject_${s.code}_report`} downloadingId={downloadingId} onDownload={download} />
                   </div>
@@ -221,7 +223,7 @@ export default function AdminReports() {
                     <div className="item-icon icon-amber"><Icon name="users" size={18} /></div>
                     <div className="item-content">
                       <div className="item-title">{s.name}</div>
-                      <div className="item-sub">{s.studentId} • {s.departmentId?.name} • Sem {s.semester} Group {s.section}</div>
+                      <div className="item-sub">{s.studentId} • {formatDepartment(s.departmentId, s.departmentCode)} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift</div>
                     </div>
                     <DownloadButtons id={s._id} endpoint={`/reports/student/${s._id}`} baseName={`student_${s.studentId}_report`} downloadingId={downloadingId} onDownload={download} />
                   </div>

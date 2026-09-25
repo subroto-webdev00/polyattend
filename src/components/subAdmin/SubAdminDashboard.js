@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/context/AuthContext';
+import { formatDepartment, formatShift } from '@/lib/display';
 import {
   DashboardPage, DashboardLoading, DashboardHero, DashboardClock,
-  StatGrid, StatCard, SectionHeader, EmptyState, ListRow, getGreeting,
+  StatGrid, StatCard, SectionHeader, EmptyState, ListRow, SubjectOverview, getGreeting,
 } from '@/components/common/DashboardKit';
 
 /* ------------------------------------------------------------------ */
@@ -13,11 +14,10 @@ import {
 /*  to match Teacher Dashboard's dark theme via the shared DashboardKit.*/
 /* ------------------------------------------------------------------ */
 
-const SHIFT_LABEL = { '1st': 'Morning Shift', '2nd': 'Day Shift' };
-
 export default function SubAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ semesterAdmins: 0, teachers: 0, students: 0 });
+  const [subjects, setSubjects] = useState([]);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
@@ -40,12 +40,14 @@ export default function SubAdminDashboard() {
       api.get('/users', { params: { role: 'semesterAdmin', departmentId: user.departmentId?._id, shift: user.shift } }),
       api.get('/users', { params: { role: 'teacher', departmentId: user.departmentId?._id, shift: user.shift } }),
       api.get('/users', { params: { role: 'student', departmentId: user.departmentId?._id, shift: user.shift, countOnly: true } }),
-    ]).then(([sa, t, st]) => {
+       api.get('/subjects').catch(() => ({ data: { subjects: [] } })),
+    ]).then(([sa, t, st, subs]) => {
       setStats({
         semesterAdmins: sa.data.count || 0,
         teachers: t.data.count || 0,
         students: st.data.count || 0,
       });
+      setSubjects(subs.data.subjects || []);
 
       const merged = [
         ...(sa.data.users || sa.data.entries || []).map(u => ({ ...u, roleLabel: 'Semester Admin' })),
@@ -54,6 +56,8 @@ export default function SubAdminDashboard() {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
       setRecent(merged);
+     }).catch((error) => {
+       console.error('Could not load Department Admin dashboard', error);
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -61,8 +65,8 @@ export default function SubAdminDashboard() {
 
   const greeting = getGreeting(now);
   const badges = [
-    user?.departmentId?.name || user?.departmentCode,
-    SHIFT_LABEL[user?.shift] || user?.shift,
+    formatDepartment(user?.departmentId, user?.departmentCode),
+    formatShift(user?.shift) ? `${formatShift(user.shift)} Shift` : '',
   ].filter(Boolean);
 
   return (
@@ -70,7 +74,7 @@ export default function SubAdminDashboard() {
       <DashboardHero
         greeting={greeting}
         name={user?.name}
-        subtitle="Sub Admin"
+        subtitle="Department Admin"
         subtitleColor="text-indigo-300"
         badges={badges}
         rightSlot={<DashboardClock now={now} />}
@@ -81,6 +85,8 @@ export default function SubAdminDashboard() {
         <StatCard index={1} icon="school" label="Teacher" value={stats.teachers} accent="emerald" />
         <StatCard index={2} icon="users" label="Student" value={stats.students} accent="amber" />
       </StatGrid>
+
+      <SubjectOverview subjects={subjects} title="Department Subjects" limit={6} />
 
       <section>
         <SectionHeader title="Recently Added" />
@@ -95,9 +101,14 @@ export default function SubAdminDashboard() {
                 icon="check"
                 iconAccent="emerald"
                 title={u.name}
-                subtitle={u.roleLabel}
+                subtitle={[
+                  u.roleLabel,
+                  formatDepartment(u.departmentId, u.departmentCode),
+                  formatShift(u.shift) ? `${formatShift(u.shift)} Shift` : '',
+                  u.semester ? `Semester ${u.semester}` : '',
+                ].filter(Boolean).join(' • ')}
                 trailing={
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400">
                     {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB') : '-'}
                   </span>
                 }

@@ -5,6 +5,7 @@ import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
+import { formatDepartment } from '@/lib/display';
 
 const SHIFT_OPTIONS = [
   { value: '1st', label: '🌅 Morning Shift' },
@@ -35,7 +36,7 @@ function SubAdminCard({ person, index, onToggle, onDelete, busy }) {
     <div className="sa-card" style={{ animationDelay: `${index * 60}ms` }}>
       <div className="sa-card-top">
         <div className="sa-avatar-wrap">
-          <div className="sa-avatar" style={{ background: gradientFor(person._id || person.email) }}>
+          <div className="sa-avatar" style={{ background: gradientFor(person.id || person._id || person.email) }}>
             {initials(person.name)}
           </div>
           <span className={`sa-dot ${person.isActive ? 'on' : 'off'}`} />
@@ -47,11 +48,11 @@ function SubAdminCard({ person, index, onToggle, onDelete, busy }) {
       </div>
 
       <div className="sa-badges">
-        <span className="sa-badge sa-badge-role"><Icon name="shield" size={11} /> Sub Admin</span>
-        {person.departmentId?.code && <span className="sa-badge sa-badge-dept">{person.departmentId.code}</span>}
+        <span className="sa-badge sa-badge-role"><Icon name="shield" size={11} /> Department Admin</span>
+        {(person.departmentId || person.department) && <span className="sa-badge sa-badge-dept">{formatDepartment(person.departmentId || person.department, person.departmentCode)}</span>}
         {person.shift && (
           <span className="sa-badge sa-badge-shift">
-            {person.shift === '1st' ? '🌅 Morning' : '🌙 Day'}
+            {(person.shift === '1st' || person.shift === 'first') ? '🌅 Morning' : '🌙 Day'}
           </span>
         )}
       </div>
@@ -218,7 +219,7 @@ function PendingInviteCard({ invite, index, onCancel, cancelling }) {
         <span className="pi-badge-waiting">
           <span className="pi-blink" /> Registration Pending
         </span>
-        {invite.departmentId?.code && <span className="pi-badge-dept">{invite.departmentId.code}</span>}
+        {(invite.departmentId || invite.department) && <span className="pi-badge-dept">{formatDepartment(invite.departmentId || invite.department, invite.departmentCode)}</span>}
       </div>
 
       <button className="pi-cancel" onClick={() => onCancel(invite)} disabled={cancelling}>
@@ -362,7 +363,7 @@ export default function AdminSubAdmins() {
   const set = f => e => {
     const value = e.target.value;
     if (f === 'departmentId') {
-      const dept = departments.find(d => d._id === value);
+      const dept = departments.find(d => (d.id || d._id) === value);
       setForm(p => ({ ...p, departmentId: value, departmentCode: dept?.code || '' }));
     } else {
       setForm(p => ({ ...p, [f]: value }));
@@ -381,7 +382,7 @@ export default function AdminSubAdmins() {
     setSaving(true);
     try {
       await api.post('/admin/sub-admins', form);
-      toast.success('Sub Admin invite sent — ask them to check their email');
+      toast.success('Department Admin invite sent — ask them to check their email');
       setShowModal(false);
       load();
     } catch (err) {
@@ -392,9 +393,10 @@ export default function AdminSubAdmins() {
   };
 
   const toggleActive = async (person) => {
-    setTogglingId(person._id);
+    const targetId = person.id || person._id;
+    setTogglingId(targetId);
     try {
-      await api.put(`/users/${person._id}`, { isActive: !person.isActive });
+      await api.put(`/users/${targetId}`, { isActive: !person.isActive });
       toast.success(person.isActive ? 'Deactivated' : 'Activated');
       load();
     } catch {
@@ -405,12 +407,13 @@ export default function AdminSubAdmins() {
   };
 
   // Pending invite hasn't become a real account yet — a lightweight confirm
-  // is enough (no typed-name step, unlike deleting an active Sub Admin).
+  // is enough (no typed-name step, unlike deleting an active Department Admin).
   const cancelInvite = async (invite) => {
     if (!window.confirm(`Cancel invite for ${invite.name}? This email's code will stop working.`)) return;
-    setCancellingId(invite._id);
+    const targetId = invite.id || invite._id;
+    setCancellingId(targetId);
     try {
-      await api.delete(`/admin/sub-admins/${invite._id}`);
+      await api.delete(`/admin/sub-admins/${targetId}`);
       toast.success('Invite cancelled');
       load();
     } catch (err) {
@@ -430,11 +433,11 @@ export default function AdminSubAdmins() {
     <div className="page sa-page">
       <div className="page-header sa-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 className="page-title">Sub Admin</h2>
-          <p className="page-sub">Create and manage Sub Admins by Department + Shift</p>
+          <h2 className="page-title">Department Admin</h2>
+          <p className="page-sub">Create and manage Department Admins by Department + Shift</p>
         </div>
         <button className="btn-primary sa-add-btn" style={{ width: 'auto', padding: '9px 18px' }} onClick={openCreate}>
-          <Icon name="plus" size={16} /> New Sub Admin
+          <Icon name="plus" size={16} /> New Department Admin
         </button>
       </div>
 
@@ -457,9 +460,9 @@ export default function AdminSubAdmins() {
           <div className="sa-grid">
             {pendingInvites.map((inv, i) => (
               <PendingInviteCard
-                key={inv._id} invite={inv} index={i}
+                key={inv.id || inv._id} invite={inv} index={i}
                 onCancel={cancelInvite}
-                cancelling={cancellingId === inv._id}
+                cancelling={cancellingId === (inv.id || inv._id)}
               />
             ))}
           </div>
@@ -467,22 +470,22 @@ export default function AdminSubAdmins() {
       )}
 
       <div className="sa-section">
-        <div className="section-title" style={{ marginBottom: 8 }}>Active Sub Admins ({filteredSubAdmins.length})</div>
+        <div className="section-title" style={{ marginBottom: 8 }}>Active Department Admins ({filteredSubAdmins.length})</div>
         {filteredSubAdmins.length === 0 ? (
           <div className="card sa-empty">
             <div className="empty">
               <div className="empty-icon"><Icon name="users" size={24} /></div>
-              <p>No Sub Admins yet</p>
+              <p>No Department Admins yet</p>
             </div>
           </div>
         ) : (
           <div className="sa-grid">
             {filteredSubAdmins.map((s, i) => (
               <SubAdminCard
-                key={s._id}
+                key={s.id || s._id}
                 person={s}
                 index={i}
-                busy={togglingId === s._id}
+                busy={togglingId === (s.id || s._id)}
                 onToggle={toggleActive}
                 onDelete={setDeleteTarget}
               />
@@ -492,10 +495,10 @@ export default function AdminSubAdmins() {
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)}>
-        <div className="modal-title">Invite New Sub Admin</div>
+        <div className="modal-title">Invite New Department Admin</div>
 
         <div className="form-group">
-          <label className="form-label">Sub Admin Name *</label>
+          <label className="form-label">Department Admin Name *</label>
           <input className="form-input" placeholder="Full Name" value={form.name} onChange={set('name')} />
         </div>
         <div className="form-group">
@@ -506,7 +509,7 @@ export default function AdminSubAdmins() {
           <label className="form-label">Department *</label>
           <select className="form-select" value={form.departmentId} onChange={set('departmentId')}>
             <option value="">-- Select Department --</option>
-            {departments.map(d => <option key={d._id} value={d._id}>{d.name} ({d.code})</option>)}
+            {departments.map(d => <option key={d.id || d._id} value={d.id || d._id}>{d.name} ({d.code})</option>)}
           </select>
         </div>
         <div className="form-group">
@@ -554,7 +557,8 @@ export default function AdminSubAdmins() {
         target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={async (confirmName) => {
-          await api.delete(`/users/${deleteTarget._id}`, { data: { confirmName } });
+          const targetId = deleteTarget.id || deleteTarget._id;
+          await api.delete(`/users/${targetId}`, { data: { confirmName } });
           toast.success(`${deleteTarget.name} has been deleted`);
           load();
         }}

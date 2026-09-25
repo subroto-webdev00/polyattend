@@ -9,6 +9,11 @@ import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 import { useAuth } from '@/context/AuthContext';
 
 const GROUPS = ['A', 'B', 'C', 'D'];
+const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+// The Prisma API exposes `id`, while the MongoDB-compatible API exposes
+// `_id`. Keep this page compatible with both response shapes.
+const getRecordId = record => record?.id || record?._id;
 
 export default function SemesterAdminTeachers() {
   const { user } = useAuth();
@@ -17,7 +22,13 @@ export default function SemesterAdminTeachers() {
   // Semester Admin's one semester". Only shown as a selector once this
   // admin actually has more than one granted Semester; with just one, it's
   // used automatically and the form stays exactly as simple as before.
-  const allowedSemesters = user?.semesters && user.semesters.length ? user.semesters : (user?.semester ? [user.semester] : []);
+  // Department Admin (`subAdmin`) has no `semesters`/`semester` scope at
+  // all — they may assign within any Semester of their Department, so they
+  // always get the full picker rather than the Semester Admin's granted list.
+  const isSubAdmin = user?.role === 'subAdmin';
+  const allowedSemesters = isSubAdmin
+    ? ALL_SEMESTERS
+    : (user?.semesters && user.semesters.length ? user.semesters : (user?.semester ? [user.semester] : []));
   const [teachers, setTeachers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +37,7 @@ export default function SemesterAdminTeachers() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [resendingId, setResendingId] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', subjectName: '', subjectCode: '', section: '', semester: null });
 
   // MULTI-SUBJECT: as the Semester Admin types an email, this looks it up
@@ -103,7 +115,7 @@ export default function SemesterAdminTeachers() {
 
   const toggleActive = async (person) => {
     try {
-      await api.put(`/users/${person._id}`, { isActive: !person.isActive });
+      await api.put(`/users/${getRecordId(person)}`, { isActive: !person.isActive });
       toast.success(person.isActive ? 'Deactivated' : 'Activated');
       load();
     } catch { toast.error('Error'); }
@@ -113,15 +125,37 @@ export default function SemesterAdminTeachers() {
   // is enough (no typed-name step, unlike deleting an active Teacher).
   const cancelInvite = async (invite) => {
     if (!window.confirm(`Cancel invite for ${invite.name}? This email's code will stop working.`)) return;
-    setCancellingId(invite._id);
+    const inviteId = getRecordId(invite);
+    if (!inviteId) {
+      toast.error('Invite not found');
+      return;
+    }
+    setCancellingId(inviteId);
     try {
-      await api.delete(`/semesterAdmin/teachers/${invite._id}`);
+      await api.delete(`/semesterAdmin/teachers/${inviteId}`);
       toast.success('Invite cancelled');
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error');
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const resendInvite = async (invite) => {
+    const inviteId = getRecordId(invite);
+    if (!inviteId) {
+      toast.error('Invite not found');
+      return;
+    }
+    setResendingId(inviteId);
+    try {
+      const response = await api.post(`/semesterAdmin/teachers/${inviteId}`);
+      toast.success(response.data.message || 'Invite email sent again');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not resend invite');
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -158,7 +192,7 @@ export default function SemesterAdminTeachers() {
           <div className="section-title" style={{ marginBottom: 8 }}>Pending Invite ({pendingInvites.length})</div>
           <PersonCardGrid>
             {pendingInvites.map(inv => (
-              <div key={inv._id} style={{
+              <div key={getRecordId(inv)} style={{
                 background: 'var(--bg)', border: '1px dashed var(--border2)',
                 borderRadius: 'var(--radius-lg)', padding: '12px 14px',
                 display: 'flex', flexDirection: 'column', gap: 6,
@@ -174,21 +208,36 @@ export default function SemesterAdminTeachers() {
                     Group {inv.section}
                   </span>
                 </div>
-                <button
-                  onClick={() => cancelInvite(inv)}
-                  disabled={cancellingId === inv._id}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                    border: '1px solid var(--border2)', background: 'transparent', color: 'var(--txt2)',
-                    cursor: cancellingId === inv._id ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                    marginTop: 4, opacity: cancellingId === inv._id ? 0.6 : 1,
-                  }}
-                  onMouseEnter={e => { if (cancellingId !== inv._id) { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--txt2)'; }}
-                >
-                  <Icon name="x" size={13} /> {cancellingId === inv._id ? 'Cancelling...' : 'Cancel Invite'}
-                </button>
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                  <button
+                    onClick={() => resendInvite(inv)}
+                    disabled={resendingId === getRecordId(inv) || cancellingId === getRecordId(inv)}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      padding: '7px 8px', borderRadius: 8, fontSize: 11.5, fontWeight: 700,
+                      border: '1px solid var(--border2)', background: 'var(--primary-light)', color: 'var(--primary)',
+                      cursor: resendingId === getRecordId(inv) ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                      opacity: resendingId === getRecordId(inv) ? 0.6 : 1,
+                    }}
+                  >
+                    <Icon name="mail" size={13} /> {resendingId === getRecordId(inv) ? 'Sending...' : 'Resend'}
+                  </button>
+                  <button
+                    onClick={() => cancelInvite(inv)}
+                    disabled={cancellingId === getRecordId(inv) || resendingId === getRecordId(inv)}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      padding: '7px 8px', borderRadius: 8, fontSize: 11.5, fontWeight: 700,
+                      border: '1px solid var(--border2)', background: 'transparent', color: 'var(--txt2)',
+                      cursor: cancellingId === getRecordId(inv) ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                      opacity: cancellingId === getRecordId(inv) ? 0.6 : 1,
+                    }}
+                    onMouseEnter={e => { if (cancellingId !== getRecordId(inv)) { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; } }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--txt2)'; }}
+                  >
+                    <Icon name="x" size={13} /> {cancellingId === getRecordId(inv) ? 'Cancelling...' : 'Cancel'}
+                  </button>
+                </div>
               </div>
             ))}
           </PersonCardGrid>
@@ -207,7 +256,7 @@ export default function SemesterAdminTeachers() {
         <PersonCardGrid>
           {filtered.map(t => (
             <PersonCard
-              key={t._id}
+              key={getRecordId(t)}
               person={t}
               actions={[
                 { label: t.isActive ? 'Deactivate' : 'Activate', variant: t.isActive ? 'danger' : undefined, onClick: () => toggleActive(t) },
@@ -325,7 +374,7 @@ export default function SemesterAdminTeachers() {
         target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={async (confirmName) => {
-          await api.delete(`/users/${deleteTarget._id}`, { data: { confirmName } });
+          await api.delete(`/users/${getRecordId(deleteTarget)}`, { data: { confirmName } });
           toast.success(`${deleteTarget.name} has been deleted`);
           load();
         }}

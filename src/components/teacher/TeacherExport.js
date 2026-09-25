@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api, { getBlobErrorMessage } from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 export default function TeacherExport() {
   const [subjects, setSubjects] = useState([]);
@@ -37,7 +38,7 @@ export default function TeacherExport() {
   const filteredSubjects = subjects.filter(s => {
     const q = subjectFilter.trim().toLowerCase();
     if (!q) return true;
-    return s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q) || s.departmentId?.name?.toLowerCase().includes(q);
+    return s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q) || s.departmentId?.name?.toLowerCase().includes(q) || s.departmentId?.code?.toLowerCase().includes(q);
   });
 
   const filteredSessions = sessions.filter(s => {
@@ -147,8 +148,8 @@ export default function TeacherExport() {
   return (
     <div>
       <div className="action-bar">
-        <Icon name="excel" size={18} style={{ color: 'var(--txt2)' }} />
-        <span className="action-bar-title">Excel Export</span>
+        <Icon name="chart" size={18} style={{ color: 'var(--txt2)' }} />
+        <span className="action-bar-title">Reports</span>
       </div>
 
       <div className="page" style={{ paddingTop: 8 }}>
@@ -213,9 +214,9 @@ export default function TeacherExport() {
                             <Icon name="book" size={18} />
                           </div>
                           <div className="item-content">
-                            <div className="item-title">{s.name} <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--txt2)' }}>({s.code})</span></div>
+                            <div className="item-title">{formatSubject(s)}</div>
                             <div className="item-sub">
-                              {s.departmentId?.name} • Sem {s.semester} • Group {s.section} • {s.shift} Shift
+                              {formatDepartment(s.departmentId, s.departmentCode)} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -281,10 +282,10 @@ export default function TeacherExport() {
                             <Icon name="calendar" size={18} />
                           </div>
                           <div className="item-content">
-                            <div className="item-title">{s.subjectId?.name} — Sem {s.semester} {s.section}</div>
+                            <div className="item-title">{formatSubject(s.subjectId)} — Sem {s.semester} • Group {s.section}</div>
                             <div className="item-sub">
                               {new Date(s.date).toLocaleDateString('en-BD', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                              {' '}• {s.presentCount}/{s.totalStudents} present
+                              {' '}• {formatDepartment(s.departmentId)} • {formatShift(s.shift || s.subjectId?.shift)} Shift • {s.presentCount}/{s.totalStudents} present
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: 4 }}>
@@ -356,7 +357,7 @@ export default function TeacherExport() {
                       <div className="item-content">
                         <div className="item-title">{s.name}</div>
                         <div className="item-sub">
-                          {s.studentId} • {s.departmentId?.name} • Sem {s.semester} • Group {s.section}
+                          {s.studentId} • {formatDepartment(s.departmentId, s.departmentCode)} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>

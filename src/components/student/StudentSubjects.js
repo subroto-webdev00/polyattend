@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import { formatDepartment, formatShift } from '@/lib/display';
 
 export default function StudentSubjects() {
 const [subjects, setSubjects] = useState([]);
@@ -182,9 +183,12 @@ return ( <div className="page">
                 }}
               >
                 Subject Code: {subject.code || 'N/A'}
+               </div>
+               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--txt2)' }}>
+                 {formatDepartment(subject.departmentId, subject.departmentCode)} • Sem {subject.semester} • Group {subject.section} • {formatShift(subject.shift)} Shift
+               </div>
               </div>
             </div>
-          </div>
 
           {/* Teacher Section */}
           <div

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import { formatDepartment, formatShift } from '@/lib/display';
 
 function initials(name) {
   return (name || '?').trim().charAt(0).toUpperCase();
@@ -129,8 +130,9 @@ export default function TeacherStudents() {
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {s.departmentId?.code && <span className="tag tag-blue" style={{ fontSize: 10 }}>{s.departmentId.code}</span>}
-                {s.semester && <span className="tag tag-green" style={{ fontSize: 10 }}>Sem {s.semester}</span>}
+                {formatDepartment(s.departmentId, s.departmentCode) && <span className="tag tag-blue" style={{ fontSize: 10 }}>{formatDepartment(s.departmentId, s.departmentCode)}</span>}
+                {s.shift && <span className="tag tag-purple" style={{ fontSize: 10 }}>{formatShift(s.shift)} Shift</span>}
+                 {s.semester && <span className="tag tag-green" style={{ fontSize: 10 }}>Sem {s.semester}</span>}
                 {s.section && <span className="tag tag-amber" style={{ fontSize: 10 }}>Group {s.section}</span>}
               </div>
               {s.mobile && (

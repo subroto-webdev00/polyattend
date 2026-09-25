@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import { useAuth } from '@/context/AuthContext';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 import SessionCheckIn from './SessionCheckIn';
 
 export default function StudentHome() {
@@ -47,7 +48,7 @@ export default function StudentHome() {
         <div>
           <div className="profile-name">{user?.name}</div>
           <div className="profile-meta">
-            {user?.studentId} • {user?.departmentId?.name} • Sem {user?.semester} • Group {user?.section}
+            {user?.studentId} • {formatDepartment(user?.departmentId, user?.departmentCode)} • Sem {user?.semester} • Group {user?.section} • {formatShift(user?.shift)} Shift
           </div>
         </div>
       </div>
@@ -93,10 +94,12 @@ export default function StudentHome() {
           const color = pct >= 75 ? 'var(--primary)' : pct >= 60 ? 'var(--accent)' : 'var(--danger)';
           const fillClass = pct >= 75 ? 'fill-green' : pct >= 60 ? 'fill-amber' : 'fill-red';
           const ineligible = pct < threshold;
+           const subjectDepartment = formatDepartment(s.subject?.departmentId, s.subject?.departmentCode);
+           const subjectShift = formatShift(s.subject?.shift);
           return (
             <div key={i} style={{ padding: '13px 16px', borderBottom: '1px solid var(--border)' }}>
               <div className="progress-row">
-                <span className="progress-label">{s.subject?.name}</span>
+                <span className="progress-label">{formatSubject(s.subject)}</span>
                 <span style={{ fontSize: 12, color, fontWeight: 700 }}>
                   {s.present}/{s.total} ({pct}%)
                 </span>
@@ -105,7 +108,7 @@ export default function StudentHome() {
                 <div className={`progress-fill ${fillClass}`} style={{ width: `${pct}%` }} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--txt3)', marginTop: 4 }}>
-                {s.subject?.code} • {s.present} present, {s.absent} absent
+                {formatSubject(s.subject)} • {subjectDepartment || 'Department unavailable'} • Sem {s.subject?.semester || s.semester || '—'} • {subjectShift ? `${subjectShift} Shift` : 'Shift unavailable'} • {s.present} present, {s.absent} absent
               </div>
               {/* FEATURE: exam-eligibility warning badge, threshold set by admin */}
               {ineligible && (

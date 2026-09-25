@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import { useAuth } from '@/context/AuthContext';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -110,14 +111,27 @@ export default function TeacherDashboard() {
   const greeting = getGreeting(now);
   const dateStr = now.toLocaleDateString('en-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' });
-  // MULTI-SUBJECT: a Teacher can now have several Subjects assigned, so
-  // the hero label adapts — one Subject shows its full name, more than
-  // one shows a count (the "Subject" tab has the full breakdown).
-  const subjectLabel = subjects.length === 1
-    ? `${subjects[0].name} (${subjects[0].code}) — Group ${subjects[0].section}`
-    : subjects.length > 1
-    ? `Responsible for ${subjects.length} Subjects`
-    : null;
+  const departmentDisplay = formatDepartment(
+    user?.departmentId?.name ? user.departmentId : user?.department,
+    user?.departmentCode
+  );
+  const subjectChips = subjects.flatMap(subject => [
+    {
+      id: `subject-${subject._id || subject.id}`,
+      text: formatSubject(subject),
+      tone: 'text-indigo-300',
+    },
+    {
+      id: `group-${subject._id || subject.id}`,
+      text: `Group ${subject.section}`,
+      tone: 'text-amber-300',
+    },
+  ]);
+  const scopeChips = [
+    { id: 'department', text: departmentDisplay, tone: 'text-blue-300' },
+    { id: 'semester', text: user?.semester ? `Semester ${user.semester}` : '', tone: 'text-emerald-300' },
+    { id: 'shift', text: formatShift(user?.shift) ? `${formatShift(user.shift)} Shift` : '', tone: 'text-purple-300' },
+  ].filter(chip => chip.text);
 
   return (
     <div className="min-h-screen bg-[#0A0B0F] text-slate-200 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -128,7 +142,7 @@ export default function TeacherDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="relative overflow-hidden rounded-2xl border border-[#242938] bg-[#12141A] p-6 sm:p-8"
+          className="relative overflow-hidden rounded-2xl bg-[#12141A] p-6 sm:p-8"
         >
           {/* subtle animated gradient accent */}
           <div
@@ -152,15 +166,25 @@ export default function TeacherDashboard() {
                 <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
                   {firstName}
                 </h1>
-                {subjectLabel ? (
-                  <p className="text-sm text-indigo-300 mt-1 font-medium">{subjectLabel}</p>
+                {subjectChips.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                     {subjectChips.map(chip => (
+                       <span key={chip.id} className={`text-xs font-medium border border-[#303747] rounded-md px-2 py-1 leading-4 ${chip.tone}`}>
+                         {chip.text}
+                       </span>
+                     ))}
+                   </div>
                 ) : (
                   <p className="text-sm text-slate-400 mt-1">Which class will you take today?</p>
                 )}
-                {user?.departmentId?.name && (
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {user.departmentId.name} • Semester {user?.semester} • {user?.shift === '1st' ? 'Morning' : 'Day'} Shift
-                  </p>
+                {scopeChips.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {scopeChips.map(chip => (
+                       <span key={chip.id} className={`text-xs font-medium border border-[#303747] rounded-md px-2 py-1 leading-4 ${chip.tone}`}>
+                         {chip.text}
+                       </span>
+                     ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -184,7 +208,7 @@ export default function TeacherDashboard() {
               <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Missed Classes</h2>
               <span className="text-xs text-slate-500">(last 7 days)</span>
             </div>
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] divide-y divide-[#20242E] overflow-hidden">
+            <div className="rounded-2xl bg-amber-500/[0.04] divide-y divide-[#20242E] overflow-hidden">
               {missedEntries.map(entry => {
                 const key = `${entry.subjectId}_${entry.date}`;
                 return (
@@ -238,11 +262,66 @@ export default function TeacherDashboard() {
           />
         </div>
 
+        {/* ---------------- ASSIGNED SUBJECTS ---------------- */}
+        {subjects.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <SectionHeader title="My Assigned Subjects" />
+              <button
+                type="button"
+                onClick={() => router.push('/teacher/subjects')}
+                className="text-xs font-semibold text-indigo-300 hover:text-indigo-200 transition-colors"
+              >
+                View all
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {subjects.map((subject, index) => (
+                <motion.div
+                  key={subject._id || subject.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: index * 0.05 }}
+                  className="rounded-2xl bg-[#12141A] p-4 sm:p-5"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
+                      <Icon name="book" size={18} className="text-indigo-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-white truncate">{subject.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{subject.code}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {formatDepartment(subject.departmentId, subject.departmentCode) ? (
+                      <span className="rounded-full bg-blue-500/10 text-blue-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">
+                        {formatDepartment(subject.departmentId, subject.departmentCode)}
+                      </span>
+                    ) : null}
+                    <span className="rounded-full bg-emerald-500/10 text-emerald-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">
+                      Sem {subject.semester}
+                    </span>
+                    <span className="rounded-full bg-amber-500/10 text-amber-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">
+                      Group {subject.section}
+                    </span>
+                    {subject.shift ? (
+                      <span className="rounded-full bg-purple-500/10 text-purple-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">
+                        {formatShift(subject.shift)} Shift
+                      </span>
+                    ) : null}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ---------------- RECENT SESSIONS ---------------- */}
         {sessions.length > 0 && (
           <section>
             <SectionHeader title="Recent Sessions" />
-            <div className="rounded-2xl border border-[#242938] bg-[#12141A] divide-y divide-[#20242E] overflow-hidden">
+            <div className="rounded-2xl bg-[#12141A] divide-y divide-[#20242E] overflow-hidden">
               {sessions.map((s, i) => {
                 const pct = s.totalStudents ? Math.round(s.presentCount / s.totalStudents * 100) : 0;
                 return (
@@ -253,16 +332,16 @@ export default function TeacherDashboard() {
                     transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.2) }}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors duration-150"
                   >
-                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
                       <Icon name="check" size={16} className="text-emerald-400" />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-white truncate">
-                        {s.subjectId?.name} — Group {s.section}
+                        {formatSubject(s.subjectId)} — Sem {s.semester}, Group {s.section}
                       </p>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {s.departmentId?.name} • {new Date(s.date).toLocaleDateString('en-BD')}
+                        {formatDepartment(s.departmentId)} • {formatShift(s.shift || s.subjectId?.shift)} Shift • {new Date(s.date).toLocaleDateString('en-BD')}
                       </p>
                     </div>
 
@@ -319,10 +398,10 @@ function StatCard({ icon, label, value, accent, index }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ y: -2 }}
-      className="relative overflow-hidden rounded-2xl border border-[#242938] bg-[#12141A] p-4 sm:p-5"
+      className="relative overflow-hidden rounded-2xl bg-[#12141A] p-4 sm:p-5"
     >
       <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${a.top} to-transparent`} />
-      <div className={`w-9 h-9 rounded-lg ${a.bg} ${a.border} border flex items-center justify-center mb-3`}>
+      <div className={`w-9 h-9 rounded-lg ${a.bg} flex items-center justify-center mb-3`}>
         <Icon name={icon} size={16} className={a.text} />
       </div>
       <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">{value}</div>

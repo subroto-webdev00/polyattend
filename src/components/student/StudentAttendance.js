@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import { useAuth } from '@/context/AuthContext';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 export default function StudentAttendance() {
   const { user } = useAuth();
@@ -28,8 +29,8 @@ export default function StudentAttendance() {
         <div className="action-bar">
           <button className="btn-icon" onClick={() => setSelectedSubject(null)}><Icon name="chevronLeft" size={18} /></button>
           <div style={{ flex: 1 }}>
-            <div className="action-bar-title">{selectedSubject.subject?.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--txt2)' }}>{selectedSubject.subject?.code}</div>
+            <div className="action-bar-title">{formatSubject(selectedSubject.subject)}</div>
+            <div style={{ fontSize: 12, color: 'var(--txt2)' }}>{formatDepartment(selectedSubject.subject?.departmentId, selectedSubject.subject?.departmentCode)} • Sem {selectedSubject.subject?.semester || selectedSubject.semester || '—'} • Group {selectedSubject.subject?.section || selectedSubject.section || '—'} • {formatShift(selectedSubject.subject?.shift)} Shift</div>
           </div>
           <span style={{
             fontWeight: 700, fontSize: 14,
@@ -101,8 +102,8 @@ export default function StudentAttendance() {
                   <Icon name="book" size={18} />
                 </div>
                 <div className="item-content">
-                  <div className="item-title">{s.subject?.name}</div>
-                  <div className="item-sub">{s.subject?.code} • {s.present}/{s.total} classes</div>
+                  <div className="item-title">{formatSubject(s.subject)}</div>
+                  <div className="item-sub">{formatDepartment(s.subject?.departmentId, s.subject?.departmentCode)} • Sem {s.subject?.semester || s.semester || '—'} • Group {s.subject?.section || s.section || '—'} • {formatShift(s.subject?.shift)} Shift • {s.present}/{s.total} classes</div>
                 </div>
                 <div className="item-right">
                   <div style={{ fontWeight: 700, color, fontSize: 15 }}>{pct}%</div>

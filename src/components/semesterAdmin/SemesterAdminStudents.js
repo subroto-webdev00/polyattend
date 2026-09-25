@@ -27,7 +27,7 @@ export default function SemesterAdminStudents() {
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all | pending | used
-  const [form, setForm] = useState({ roll: '', email: '', section: '' });
+  const [form, setForm] = useState({ name: '', roll: '', email: '', section: '' });
   const [uploadResult, setUploadResult] = useState(null);
   const fileInputRef = useRef(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // a `used` entry, needs typed-name confirm
@@ -43,13 +43,13 @@ export default function SemesterAdminStudents() {
 
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }));
 
-  const openCreate = () => { setForm({ roll: '', email: '', section: '' }); setShowModal(true); };
+  const openCreate = () => { setForm({ name: '', roll: '', email: '', section: '' }); setShowModal(true); };
 
   const handleSubmit = async () => {
-    if (!form.roll || !form.email || !form.section) return toast.error('Enter Roll, Email and Group');
+    if (!form.name || !form.roll || !form.email || !form.section) return toast.error('Enter Name, Roll, Email and Group');
     setSaving(true);
     try {
-      await api.post('/semesterAdmin/students', form, { params: { semester: selectedSemester } });
+      await api.post('/semesterAdmin/students', { ...form, semester: selectedSemester }, { params: { semester: selectedSemester } });
       toast.success('Student pre-approved — code sent to their email');
       setShowModal(false);
       load();
@@ -68,11 +68,16 @@ export default function SemesterAdminStudents() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('semester', String(selectedSemester));
       // IMPORTANT: don't set Content-Type manually here — axios/the browser
       // needs to generate the multipart boundary itself.
       const res = await api.post('/semesterAdmin/students', formData, { params: { semester: selectedSemester } });
-      setUploadResult(res.data);
-      toast.success(res.data.message);
+      const data = res.data || {};
+      const added = data.added || (data.results || []).filter(r => r.ok);
+      const skipped = data.skipped || (data.results || []).filter(r => !r.ok);
+      setUploadResult({ ...data, added, skipped });
+      if (added.length) toast.success(data.message || `${added.length} student(s) added`);
+      else toast.error(data.message || 'No students were added — check skipped rows');
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Upload failed');
@@ -151,7 +156,7 @@ export default function SemesterAdminStudents() {
       </div>
 
       <div style={{ fontSize: 12, color: 'var(--txt3)', marginBottom: 16, background: 'var(--bg3)', padding: '10px 14px', borderRadius: 10 }}>
-        📄 The Excel/CSV file must have <strong>Roll</strong>, <strong>Email</strong> and <strong>Group</strong> — these three columns (as headers in the first row, Group as A/B/C/D). Each Student's email will get a separate 12-digit code.
+        📄 The Excel/CSV file must have <strong>Name</strong>, <strong>Roll</strong>, <strong>Email</strong> and <strong>Group</strong> — these four columns (as headers in the first row, Group as A/B/C/D). Each Student's email will get a separate 12-digit code.
       </div>
 
       {/* MULTI-SEMESTER ADMIN: Student Validation stays strictly separate
@@ -258,10 +263,10 @@ export default function SemesterAdminStudents() {
               <span className={en.used ? 'dot-used' : 'dot-pending'} style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontWeight: 700, fontSize: 13.5 }}>
-                  {en.used && en.usedByUserId?.name ? en.usedByUserId.name : `Roll: ${en.roll}`}
+                  {en.name ? en.name : `Roll: ${en.roll}`}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--txt2)' }}>
-                  {en.used && en.usedByUserId?.name ? `Roll: ${en.roll} • ` : ''}{en.email}{en.section ? ` • Group ${en.section}` : ''}
+                  {en.name ? `Roll: ${en.roll} • ` : ''}{en.email}{en.section ? ` • Group ${en.section}` : ''}
                 </div>
               </div>
               <span className={`tag ${en.used ? 'tag-green' : 'tag-amber'}`}>
@@ -287,6 +292,10 @@ export default function SemesterAdminStudents() {
       <Modal open={showModal} onClose={() => setShowModal(false)}>
         <div className="modal-title">Add One Student</div>
 
+        <div className="form-group">
+          <label className="form-label">Full Name *</label>
+          <input className="form-input" placeholder="Student's full name" value={form.name} onChange={set('name')} />
+        </div>
         <div className="form-group">
           <label className="form-label">Roll *</label>
           <input className="form-input" placeholder="e.g. 800768" value={form.roll} onChange={set('roll')} />
@@ -320,7 +329,7 @@ export default function SemesterAdminStudents() {
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--txt3)', marginTop: 4, marginBottom: 4 }}>
-          A Student Profile is created right away (Roll, Email, Group, Semester) — only the Name stays empty until the Student registers with this Email. Submitting will send a 12-digit Registration Code to this email (valid for 1 month).
+          A Student Profile is created right away with the Name, Roll, Email, Group and Semester you enter. Submitting will send a 12-digit Registration Code to this email (valid for 1 month).
         </div>
 
         <div className="modal-footer">

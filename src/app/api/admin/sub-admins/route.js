@@ -18,8 +18,10 @@ export async function POST(request) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;
   try {
-    const { name, email, departmentId, departmentCode, shift } = await request.json();
+    let { name, email, departmentId, departmentCode, shift } = await request.json();
     if (!name || !email || !departmentId || !shift) return NextResponse.json({ success: false, message: 'Enter Name, Email, Department and Shift' }, { status: 400 });
+    if (shift === '1st') shift = 'first';
+    if (shift === '2nd') shift = 'second';
     if (!['first', 'second'].includes(shift)) return NextResponse.json({ success: false, message: 'Select a valid Shift' }, { status: 400 });
     const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await prisma.user.findFirst({ where: { email: normalizedEmail } });
@@ -27,7 +29,7 @@ export async function POST(request) {
     const department = await prisma.department.findUnique({ where: { id: departmentId } });
     if (!department) return NextResponse.json({ success: false, message: 'Department not found' }, { status: 404 });
     const existingSubAdmin = await prisma.user.findFirst({ where: { role: 'subAdmin', departmentId, shift, isActive: true } });
-    if (existingSubAdmin) return NextResponse.json({ success: false, message: `A Sub Admin (${existingSubAdmin.name}) already exists for this Department and Shift` }, { status: 400 });
+    if (existingSubAdmin) return NextResponse.json({ success: false, message: `A Department Admin (${existingSubAdmin.name}) already exists for this Department and Shift` }, { status: 400 });
     const existingInvite = await prisma.adminInvite.findFirst({ where: { role: 'subAdmin', departmentId, shift, used: false, codeExpire: { gt: new Date() } } });
     if (existingInvite) return NextResponse.json({ success: false, message: `An invite (${existingInvite.email}) is already pending for this Department and Shift` }, { status: 400 });
     const code = generateInviteCode();

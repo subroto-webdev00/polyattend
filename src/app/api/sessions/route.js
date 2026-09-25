@@ -3,7 +3,30 @@ import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
 import { checkHoliday } from '@/lib/holidayCheck';
 export const dynamic = 'force-dynamic';
-const sessionInclude = { teacher: { select: { id: true, name: true } }, department: { select: { id: true, name: true, code: true } }, subject: { select: { id: true, name: true, code: true } } };
+const sessionInclude = {
+  teacher: { select: { id: true, name: true, email: true, role: true } },
+  department: { select: { id: true, name: true, code: true } },
+  subject: { select: { id: true, name: true, code: true } },
+};
+
+// Normalize Prisma's separate foreign keys + relations into the populated
+// document shape used throughout the existing frontend.
+function normalizeSession(session) {
+  if (!session) return session;
+  return {
+    ...session,
+    _id: session.id,
+    teacherId: session.teacher
+      ? { ...session.teacher, _id: session.teacher.id || session.teacher._id }
+      : session.teacherId,
+    departmentId: session.department
+      ? { ...session.department, _id: session.department.id }
+      : session.departmentId,
+    subjectId: session.subject
+      ? { ...session.subject, _id: session.subject.id }
+      : session.subjectId,
+  };
+}
 export async function POST(request) {
   const auth = await requireAuth(request, ['teacher', 'admin']);
   if (auth.error) return auth.error;
@@ -43,7 +66,7 @@ export async function POST(request) {
     const totalStudents = await prisma.user.count({ where: { role: 'student', departmentId: subject.departmentId, semester: parseInt(semester), section, isActive: true, registered: true, ...(subject.shift ? { shift: subject.shift } : {}) } });
     const data = { teacherId: auth.user.id, departmentId: subject.departmentId, subjectId, semester: parseInt(semester), section, shift: subject.shift || null, totalStudents, ...(sessionDate ? { date: sessionDate } : {}) };
     const session = await prisma.session.create({ data, include: sessionInclude });
-    return NextResponse.json({ success: true, session }, { status: 201 });
+    return NextResponse.json({ success: true, session: normalizeSession(session) }, { status: 201 });
   } catch (error) { return errorResponse(error); }
 }
 export async function GET(request) {
@@ -61,6 +84,6 @@ export async function GET(request) {
     if (searchParams.get('section')) where.section = searchParams.get('section');
     if (searchParams.get('status')) where.status = searchParams.get('status');
     const sessions = await prisma.session.findMany({ where, include: sessionInclude, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], take: 100 });
-    return NextResponse.json({ success: true, count: sessions.length, sessions });
+    return NextResponse.json({ success: true, count: sessions.length, sessions: sessions.map(normalizeSession) });
   } catch (error) { return errorResponse(error); }
 }

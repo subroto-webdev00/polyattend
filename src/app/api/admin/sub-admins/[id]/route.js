@@ -11,6 +11,6 @@ export async function DELETE(request, { params }) {
     const invite = await prisma.adminInvite.findUnique({ where: { id } });
     if (invite) { await prisma.adminInvite.delete({ where: { id } }); return NextResponse.json({ success: true, message: 'Invite cancelled' }); }
     await prisma.user.update({ where: { id }, data: { isActive: false } });
-    return NextResponse.json({ success: true, message: 'Sub Admin deactivated' });
+    return NextResponse.json({ success: true, message: 'Department Admin deactivated' });
   } catch (error) { return errorResponse(error); }
 }

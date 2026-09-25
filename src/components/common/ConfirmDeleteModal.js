@@ -4,7 +4,7 @@ import Modal from './Modal';
 import toast from 'react-hot-toast';
 
 // Shared "type the name to confirm" delete flow — used everywhere a
-// PersonCard shows a Delete action (Sub Admin, Semester Admin, Teacher,
+// PersonCard shows a Delete action (Department Admin, Semester Admin, Teacher,
 // Student lists). Deletion is permanent, so this is the one safeguard
 // standing between a misclick and losing the record for good.
 //
@@ -43,7 +43,7 @@ export default function ConfirmDeleteModal({ target, onClose, onConfirm }) {
     <Modal open={!!target} onClose={onClose}>
       <div className="modal-title" style={{ color: 'var(--danger)' }}>Permanently Delete</div>
       <p style={{ fontSize: 13, color: 'var(--txt2)', marginBottom: 4 }}>
-        This action <strong>cannot be undone</strong>. To confirm deleting <strong>{target?.name}</strong>, type their name exactly below:
+        This action <strong>cannot be undone</strong>. Deleting <strong>{target?.name}</strong> will also remove related attendance, sessions, invites, and account history. To confirm, type their name exactly below:
       </p>
       <div className="form-group">
         <input

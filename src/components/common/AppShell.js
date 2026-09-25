@@ -6,6 +6,14 @@ import { blockIfSessionActive } from '@/utils/sessionGuard';
 import Icon from './Icon';
 import Modal from './Modal';
 
+const ROLE_LABELS = {
+  admin: 'Admin',
+  subAdmin: 'Department Admin',
+  semesterAdmin: 'Semester Admin',
+  teacher: 'Teacher',
+  student: 'Student',
+};
+
 export default function AppShell({ navItems, children }) {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -38,6 +46,7 @@ export default function AppShell({ navItems, children }) {
   };
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
+  const displayRole = ROLE_LABELS[user?.role] || user?.role || '';
 
   return (
     <div className="shell-root">
@@ -74,7 +83,7 @@ export default function AppShell({ navItems, children }) {
             <div className="sidebar-avatar">{initials}</div>
             <div className="sidebar-user-info">
               <div className="sidebar-username">{user?.name}</div>
-              <div className="sidebar-role" style={{ textTransform: 'capitalize' }}>{user?.role}</div>
+              <div className="sidebar-role" style={{ textTransform: 'capitalize' }}>{displayRole}</div>
             </div>
             <button
               className="sidebar-logout"
@@ -115,7 +124,7 @@ export default function AppShell({ navItems, children }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className={`tag ${user?.role === 'teacher' ? 'tag-green' : user?.role === 'admin' ? 'tag-blue' : 'tag-amber'}`} style={{ fontSize: 10, textTransform: 'capitalize' }}>
-              {user?.role}
+              {displayRole}
             </span>
           </div>
         </header>

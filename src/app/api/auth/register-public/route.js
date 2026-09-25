@@ -7,11 +7,11 @@ import sendEmail from '@/lib/sendEmail';
 export const dynamic = 'force-dynamic';
 export async function POST(request) {
   try {
-    const { name, email, password, role, studentId, preApprovalCode, mobile } = await request.json();
+    const { email, password, role, studentId, preApprovalCode, mobile } = await request.json();
     const limited = checkRateLimit(request, 'register-public', email, { limit: 8, windowMs: 15 * 60 * 1000 });
     if (limited) return NextResponse.json({ success: false, message: limited.message }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } });
     if (role !== 'student') return NextResponse.json({ success: false, message: 'Only Students can register here.' }, { status: 400 });
-    if (!name || !email || !password || !role) return NextResponse.json({ success: false, message: 'Enter Name, Email, Password and role' }, { status: 400 });
+    if (!email || !password || !role) return NextResponse.json({ success: false, message: 'Enter Email, Password and role' }, { status: 400 });
     const pwCheck = isStrongPassword(password);
     if (!pwCheck.ok) return NextResponse.json({ success: false, message: pwCheck.message }, { status: 400 });
     const normalizedEmail = email.toLowerCase().trim();
@@ -25,6 +25,7 @@ export async function POST(request) {
     if (!preApprovalCode) return NextResponse.json({ success: false, message: 'Enter the 12-digit Registration Code' }, { status: 400 });
     const shadow = await prisma.user.findFirst({ where: { studentId: studentId.trim(), email: normalizedEmail, role: 'student', registered: false, regCode: preApprovalCode.trim().toUpperCase(), regCodeExpire: { gt: new Date() } } });
     if (!shadow) return NextResponse.json({ success: false, message: 'Roll, Email or Code does not match, or Code has expired.' }, { status: 400 });
+    const name = shadow.name;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
     await prisma.pendingRegistration.deleteMany({ where: { email: normalizedEmail } });

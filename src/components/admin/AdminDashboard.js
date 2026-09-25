@@ -3,9 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 import {
   DashboardPage, DashboardLoading, DashboardHero, DashboardClock,
-  StatGrid, StatCard, SectionHeader, EmptyState, ListRow,
+  StatGrid, StatCard, SectionHeader, EmptyState, ListRow, SubjectOverview,
 } from '@/components/common/DashboardKit';
 
 /* ------------------------------------------------------------------ */
@@ -59,8 +60,23 @@ function getAdminGreeting(hour) {
   return { text: 'Good Evening', icon: 'moon' };
 }
 
+function sessionTitle(session) {
+  return `${formatSubject(session.subjectId)} — Sem ${session.semester}, Group ${session.section || '—'}`;
+}
+
+function sessionSubtitle(session) {
+  const shift = formatShift(session.shift || session.subjectId?.shift);
+  return [
+    formatDepartment(session.departmentId),
+    shift ? `${shift} Shift` : '',
+    session.teacherId?.name ? `Teacher: ${session.teacherId.name}` : '',
+    session.date ? new Date(session.date).toLocaleDateString('en-BD') : '',
+  ].filter(Boolean).join(' • ');
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ students: 0, teachers: 0, subjects: 0, sessions: 0 });
+  const [subjects, setSubjects] = useState([]);
   const [recentSessions, setRecentSessions] = useState([]);
   const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,6 +137,7 @@ export default function AdminDashboard() {
         subjects: su.data.subjects?.length || 0,
         sessions: se.data.count || 0,
       });
+      setSubjects(su.data.subjects || []);
       setRecentSessions(se.data.sessions?.slice(0, 6) || []);
       // Fetched separately (not just top-6-recent) so an old/stray session
       // that's still active never scrolls out of view.
@@ -144,7 +161,7 @@ export default function AdminDashboard() {
       <DashboardHero
         greeting={greeting.text}
         name={adminName || 'Admin'}
-        subtitle="Super Admin"
+        subtitle="Admin"
         subtitleColor="text-indigo-300"
         rightSlot={<DashboardClock now={now} />}
       />
@@ -154,6 +171,8 @@ export default function AdminDashboard() {
           <StatCard key={c.key} index={i} icon={c.icon} label={c.label} value={<AnimatedNumber value={c.value} />} accent={c.accent} />
         ))}
       </StatGrid>
+
+      <SubjectOverview subjects={subjects} title="Subject Overview" limit={6} />
 
       <AnimatePresence>
         {activeSessions.length > 0 && (
@@ -170,14 +189,14 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.3) }}
-                  className="flex items-center gap-3 rounded-xl border border-rose-500/30 bg-[#12141A] px-4 py-3"
+                  className="flex items-center gap-3 rounded-xl bg-[#12141A] px-4 py-3"
                 >
                   <span className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
                     <Icon name="clipboard" size={14} />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{s.subjectId?.name} — {s.section}</div>
-                    <div className="text-xs text-slate-500 truncate">{s.departmentId?.name} • {s.teacherId?.name} • {new Date(s.date).toLocaleDateString()}</div>
+                    <div className="text-sm font-medium text-white truncate">{sessionTitle(s)}</div>
+                    <div className="text-xs text-slate-500 truncate">{sessionSubtitle(s)}</div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="text-sm font-semibold text-white tabular-nums">{s.presentCount}/{s.totalStudents}</div>
@@ -208,8 +227,8 @@ export default function AdminDashboard() {
                 index={i}
                 icon="clipboard"
                 iconAccent="emerald"
-                title={`${s.subjectId?.name} — ${s.section}`}
-                subtitle={`${s.departmentId?.name} • ${s.teacherId?.name} • ${new Date(s.date).toLocaleDateString()}`}
+                title={sessionTitle(s)}
+                subtitle={sessionSubtitle(s)}
                 trailing={
                   <div className="flex items-center gap-3">
                     <div className="text-right">

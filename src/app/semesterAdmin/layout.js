@@ -14,7 +14,7 @@ const navItems = [
   { section: 'Analytics' },
   { label: 'Reports', icon: 'chart', path: '/semesterAdmin/reports' },
   { section: 'Tools' },
-  { label: 'Search Mobile Number', icon: 'phone', path: '/semesterAdmin/search-mobile' },
+  { label: 'Search Profile', icon: 'phone', path: '/semesterAdmin/search-mobile' },
 ];
 
 export default function SemesterAdminRootLayout({ children }) {

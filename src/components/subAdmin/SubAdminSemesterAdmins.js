@@ -5,9 +5,9 @@ import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
+import { formatDepartment, formatShift } from '@/lib/display';
 
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
-const SHIFT_LABEL = { '1st': 'Morning Shift', '2nd': 'Day Shift' };
 
 function SemesterAdminCard({ person, onToggle, onDelete }) {
   const initial = (person.name || '?').trim().charAt(0).toUpperCase();
@@ -30,7 +30,7 @@ function SemesterAdminCard({ person, onToggle, onDelete }) {
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
         <span className="sa-chip sa-chip-primary">Semester Admin</span>
-        {person.departmentCode && <span className="sa-chip">{person.departmentCode}</span>}
+        {formatDepartment(person.departmentId, person.departmentCode) && <span className="sa-chip">{formatDepartment(person.departmentId, person.departmentCode)}</span>}
         {(person.semesters && person.semesters.length ? person.semesters : (person.semester ? [person.semester] : [])).map(sem => (
           <span key={sem} className="sa-chip">Sem {sem}</span>
         ))}
@@ -39,7 +39,7 @@ function SemesterAdminCard({ person, onToggle, onDelete }) {
         <div style={{ marginTop: 8 }}>
           <span className="sa-chip sa-chip-muted">
             <Icon name="clock" size={11} style={{ marginRight: 4, verticalAlign: -1.5 }} />
-            {SHIFT_LABEL[person.shift] || person.shift}
+            {formatShift(person.shift)} Shift
           </span>
         </div>
       )}

@@ -1,0 +1,13 @@
+# Local secrets must come from Vercel Environment Variables, never source files.
+.env
+.env.*
+!.env.example
+
+# Mobile/native build artifacts are not used by the Next.js deployment.
+android/
+ios/
+*.zip
+
+# Local logs and tooling metadata.
+*.log
+.vercel/

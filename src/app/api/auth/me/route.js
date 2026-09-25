@@ -12,6 +12,12 @@ export async function GET(request) {
     });
     const { password: _, ...safeUser } = user;
     safeUser._id = safeUser.id;
+    // Match the login response shape used by the frontend. Without this,
+    // /auth/me overwrites the populated department object with the raw
+    // department UUID and dashboards display an internal ID to the user.
+    safeUser.departmentId = safeUser.department
+      ? { ...safeUser.department, _id: safeUser.department.id }
+      : safeUser.departmentId;
     normalizeSemesterAdmin(safeUser);
     return NextResponse.json({ success: true, user: safeUser });
   } catch (error) { return errorResponse(error); }

@@ -1,16 +1,68 @@
+# Dependencies, build output and local caches
 node_modules/
 .next/
-.env.local
+out/
+dist/
+coverage/
+.turbo/
+.vercel/
+*.tsbuildinfo
+.eslintcache
+
+# Secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs, editor and OS files
 *.log
 .DS_Store
-.env
+Thumbs.db
+.vscode/
+.idea/
 
-# SECURITY: README.md currently contains a real secret (TEACHER_SECRET_KEY
-# value) in plaintext. Excluding it from git so it isn't pushed publicly.
-# See the note in SETUP.md about rotating this secret and moving it to
-# .env.local only.
-README.md
+# AI/tooling local files
 .agents/
 .claude/
 .windsurf/
 skills-lock.json
+
+# SECURITY: README.md previously contained a real TEACHER_SECRET_KEY value.
+# Keep it local until the secret has been removed/rotated.
+README.md
+
+# PWA build output
+public/sw*.js
+public/swe-worker*.js
+public/workbox-*.js
+
+# Archives, backups and mobile release bundles
+*.zip
+*.jsapp
+*.app/
+*.ipa
+*.aab
+
+# Duplicate/legacy project copy
+public/prisma_project/
+
+# Android / Capacitor generated output (Android source remains tracked)
+android/**/.gradle/
+android/**/build/
+android/.idea/
+android/local.properties
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/.gradle/
+android/capacitor-cordova-android-plugins/build/
+android/capacitor-cordova-android-plugins/cordova.variables.gradle
+
+# Common iOS/Capacitor generated output
+ios/**/build/
+ios/**/DerivedData/
+ios/Pods/
+ios/App/App/public/

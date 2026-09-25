@@ -49,7 +49,7 @@ export async function POST(request) {
         section: user.section, subjectId: user.subject,
       },
     });
-    response.cookies.set('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60, path: '/' });
+    response.cookies.set('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', maxAge: 7 * 24 * 60 * 60, path: '/' });
     return response;
   } catch (error) { return errorResponse(error); }
 }

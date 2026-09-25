@@ -1,13 +1,14 @@
 'use client';
 import React from 'react';
 import Icon from './Icon';
+import { formatShift } from '@/lib/display';
 
 // ── SHARED COMPACT CARD ─────────────────────────────────────────────────
-// Used everywhere a person (Student, Teacher, Sub Admin, Semester Admin)
+// Used everywhere a person (Student, Teacher, Department Admin, Semester Admin)
 // needs to be shown as a small, information-dense card instead of a full
 // table row — grids of these scan much faster than a long list. Each role
 // shows a different, relevant subset of fields (a Student's Roll/Group
-// isn't relevant to a Sub Admin, a Sub Admin's Department+Shift isn't
+// isn't relevant to a Department Admin, a Department Admin's Department+Shift isn't
 // relevant to a Teacher's Subject, etc.) but the visual shape stays the
 // same everywhere so the whole app feels consistent.
 //
@@ -21,14 +22,12 @@ import Icon from './Icon';
 //   onClick: optional — makes the whole card clickable (e.g. open detail/edit)
 
 const ROLE_META = {
-  admin: { label: 'Super Admin', tag: 'tag-blue', color: '#60a5fa' },
-  subAdmin: { label: 'Sub Admin', tag: 'tag-purple', color: '#a78bfa' },
+  admin: { label: 'Admin', tag: 'tag-blue', color: '#60a5fa' },
+  subAdmin: { label: 'Department Admin', tag: 'tag-purple', color: '#a78bfa' },
   semesterAdmin: { label: 'Semester Admin', tag: 'tag-blue', color: '#38bdf8' },
   teacher: { label: 'Teacher', tag: 'tag-green', color: '#34d399' },
   student: { label: 'Student', tag: 'tag-amber', color: '#fbbf24' },
 };
-
-const SHIFT_LABEL = { '1st': 'Morning', '2nd': 'Day' };
 
 function initials(name) {
   return (name || '').trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -36,7 +35,7 @@ function initials(name) {
 
 function fieldsForRole(p) {
   const deptCode = p.departmentId?.code || p.departmentCode || null;
-  const shiftLabel = p.shift ? (SHIFT_LABEL[p.shift] || p.shift) : null;
+  const shiftLabel = p.shift ? formatShift(p.shift) : null;
 
   switch (p.role) {
     case 'student':
@@ -57,8 +56,12 @@ function fieldsForRole(p) {
       // informative at a glance — no need to click in for details. Falls
       // back to the old single-subject shape for any other caller still
       // passing a plain User document with `subjectId`.
-      if (Array.isArray(p.subjects) && p.subjects.length > 0) {
-        const subjectChips = p.subjects.map(s => ({
+      const assignedSubjects = Array.isArray(p.subjects)
+        ? p.subjects
+        : Array.isArray(p.taughtSubjects) ? p.taughtSubjects : [];
+
+      if (assignedSubjects.length > 0) {
+        const subjectChips = assignedSubjects.map(s => ({
           icon: 'book',
           text: `${s.name} (${s.code})${s.semester ? ` · Sem ${s.semester}` : ''} · Grp ${s.section}`,
         }));

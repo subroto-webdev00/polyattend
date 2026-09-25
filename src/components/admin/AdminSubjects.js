@@ -2,14 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
-const SHIFT_LABEL = { '1st': 'Morning', '2nd': 'Day' };
-
-// MISTAKE FIX: Super Admin could previously create/edit/delete Subjects
+// MISTAKE FIX: Admin could previously create/edit/delete Subjects
 // directly here, which bypassed the actual rule now in place — a Teacher
 // and their one Subject are only ever created together, by a Semester
 // Admin, through the invite flow. This page is now read-only: it exists
-// so Super Admin can see everything that exists, grouped by Department,
+// so Admin can see everything that exists, grouped by Department,
 // without being able to create a Subject with no Teacher behind it.
 export default function AdminSubjects() {
   const [subjects, setSubjects] = useState([]);
@@ -35,9 +34,9 @@ export default function AdminSubjects() {
   // within it, so the page reads as one section per department.
   const byDepartment = {};
   subjects.forEach(s => {
-    const deptName = s.departmentId?.name || 'Unknown Department';
+    const deptName = formatDepartment(s.departmentId, s.departmentCode) || 'Unknown Department';
     if (!byDepartment[deptName]) byDepartment[deptName] = {};
-    const subKey = `Semester ${s.semester} • ${SHIFT_LABEL[s.shift] || s.shift} Shift • Group ${s.section}`;
+    const subKey = `Semester ${s.semester} • ${formatShift(s.shift) || s.shift} Shift • Group ${s.section}`;
     if (!byDepartment[deptName][subKey]) byDepartment[deptName][subKey] = [];
     byDepartment[deptName][subKey].push(s);
   });
@@ -54,7 +53,7 @@ export default function AdminSubjects() {
       <div className="filter-bar">
         <select className="form-select" style={{ width: 'auto' }} value={filterDept} onChange={e => setFilterDept(e.target.value)}>
           <option value="">All Departments</option>
-          {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+          {departments.map(d => <option key={d.id || d._id} value={d.id || d._id}>{d.name} ({d.code})</option>)}
         </select>
       </div>
 
@@ -82,8 +81,8 @@ export default function AdminSubjects() {
                     <div key={s._id} className="list-item">
                       <div className="item-icon icon-green"><Icon name="book" size={18} /></div>
                       <div className="item-content">
-                        <div className="item-title">{s.name}</div>
-                        <div className="item-sub">Code: {s.code} • Teacher: {s.teacherId?.name || 'Unassigned'}</div>
+                        <div className="item-title">{formatSubject(s)}</div>
+                        <div className="item-sub">{formatDepartment(s.departmentId, s.departmentCode)} • Teacher: {s.teacherId?.name || 'Unassigned'}</div>
                       </div>
                     </div>
                   ))}

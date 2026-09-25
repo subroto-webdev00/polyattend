@@ -29,12 +29,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({
-    name: '', email: '', password: '',
+    email: '', password: '',
     studentId: '', preApprovalCode: '', mobile: '',
   });
 
   // Small derived values — only for UI hint/animation, submit validation stays as-is
-  const nameValid = form.name.trim().length > 0;
   const emailValid = EMAIL_REGEX.test(form.email);
   const passwordValid = isStrongPassword(form.password).ok;
   const strength = getPasswordStrength(form.password);
@@ -42,7 +41,7 @@ export default function RegisterPage() {
   const set = field => e => setForm(p => ({ ...p, [field]: e.target.value }));
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password) return toast.error('Name, Email and Password are required');
+    if (!form.email || !form.password) return toast.error('Email and Password are required');
     if (!EMAIL_REGEX.test(form.email)) return toast.error('Enter a valid Email address');
     const pwCheck = isStrongPassword(form.password);
     if (!pwCheck.ok) return toast.error(pwCheck.message);
@@ -140,14 +139,6 @@ export default function RegisterPage() {
         <p className="auth-sub" style={{ marginBottom: 20 }}>🎓 Student Registration</p>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group rp-anim-field" style={{ animationDelay: '60ms' }}>
-            <label className="form-label">Full Name *</label>
-            <div className="rp-input-wrap">
-              <input className="form-input" placeholder="Your full name" value={form.name} onChange={set('name')} required style={{ paddingRight: 36 }} />
-              {nameValid && <span className="rp-check" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>✓</span>}
-            </div>
-          </div>
-
           <div className="form-group rp-anim-field" style={{ animationDelay: '120ms' }}>
             <label className="form-label">Email *</label>
             <div className="rp-input-wrap">
@@ -241,7 +232,7 @@ export default function RegisterPage() {
                 </span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--txt3)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginBottom: 4 }}>
-                🎓 Your Department, Semester, Group and Shift were already set by your Semester Admin — no need to pick them again.
+                🎓 Your Name, Department, Semester, Group and Shift were already set by your Semester Admin — no need to enter them again.
               </div>
             </div>
           )}
@@ -256,7 +247,7 @@ export default function RegisterPage() {
           <Link href="/login" className="rp-login-link" style={{ color: 'var(--primary)', fontWeight: 600 }}>Login</Link>
         </p>
         <p style={{ textAlign: 'center', marginTop: 8, fontSize: 12.5, color: 'var(--txt3)' }}>
-          Sub Admin / Semester Admin / Teacher?{' '}
+          Department Admin / Semester Admin / Teacher?{' '}
           <Link href="/admin-register" className="rp-login-link" style={{ color: 'var(--txt2)', fontWeight: 600 }}>Admin Registration</Link>
         </p>
       </div>

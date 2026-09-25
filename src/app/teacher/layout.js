@@ -9,9 +9,8 @@ const navItems = [
   { label: 'Take Attendance', icon: 'clipboard', path: '/teacher/attendance' },
   { label: 'Covered Miss Class', icon: 'play', path: '/teacher/covered-miss-class' },
   { label: 'Session History', icon: 'history', path: '/teacher/sessions' },
-  { label: 'Reports', icon: 'chart', path: '/teacher/reports' },
-  { label: 'Excel Export', icon: 'excel', path: '/teacher/export' },
-  { label: 'Search Mobile Number', icon: 'phone', path: '/teacher/search-mobile' },
+  { label: 'Reports', icon: 'chart', path: '/teacher/export' },
+  { label: 'Search Profile', icon: 'phone', path: '/teacher/search-mobile' },
 ];
 
 export default function TeacherRootLayout({ children }) {

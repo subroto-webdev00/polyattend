@@ -4,6 +4,7 @@ import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import useSessionExitGuard from '@/hooks/useSessionExitGuard';
+import { formatDepartment, formatShift } from '@/lib/display';
 
 // Natural sort by Roll (studentId) — so that "2" comes before "10",
 // avoiding the plain alphabetical mistake where "10" comes before "2".
@@ -469,7 +470,7 @@ export default function TeacherTakeAttendance() {
               <div className="text-xs font-mono font-semibold text-brand-600 mb-1">{s.code}</div>
               <div className="font-semibold text-slate-900 mb-1">{s.name}</div>
               <div className="text-xs text-slate-500">
-                {s.departmentId?.name || <span className="text-amber-600">No Department</span>} • Sem {s.semester} • Group {s.section}
+                {formatDepartment(s.departmentId, s.departmentCode) || <span className="text-amber-600">No Department</span>} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-brand-600 text-sm font-semibold">
                 <Icon name="play" size={14} /> Start Attendance

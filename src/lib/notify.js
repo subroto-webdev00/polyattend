@@ -55,13 +55,13 @@ export function classMissedEmail({ subjectName, subjectCode, date }) {
 }
 
 // ── FEATURE: Invite code emails ─────────────────────────────────────────
-// Used for the whole hierarchy invite flow: Super Admin → Sub Admin,
-// Sub Admin → Semester Admin, Semester Admin → Teacher, and Semester
+// Used for the whole hierarchy invite flow: Admin → Department Admin,
+// Department Admin → Semester Admin, Semester Admin → Teacher, and Semester
 // Admin → Student pre-approval. Each recipient gets a 12-character
 // alphanumeric code (valid 1 month) to complete their own registration
 // with just Email + Code (+ Password, + Roll for students).
 const ROLE_LABEL = {
-  subAdmin: 'Sub Admin',
+  subAdmin: 'Department Admin',
   semesterAdmin: 'Semester Admin',
   teacher: 'Teacher',
   student: 'Student',

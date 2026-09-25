@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 export function TeacherSessions() {
   const [sessions, setSessions] = useState([]);
@@ -68,9 +69,9 @@ export function TeacherSessions() {
               </button>
             </div>
             <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{selected.subjectId?.name}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{formatSubject(selected.subjectId)}</div>
               <div style={{ fontSize: 13, color: 'var(--txt2)' }}>
-                {selected.departmentId?.name} • Sem {selected.semester} {selected.section} • {new Date(selected.date).toLocaleDateString('en-BD')}
+                {formatDepartment(selected.departmentId)} • Sem {selected.semester} • Group {selected.section} • {formatShift(selected.shift || selected.subjectId?.shift)} Shift • {new Date(selected.date).toLocaleDateString('en-BD')}
               </div>
               <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                 <span className="tag tag-green">{selected.presentCount} Present</span>
@@ -123,8 +124,8 @@ export function TeacherSessions() {
                       <div key={s._id} className="list-item" onClick={() => viewSession(s)}>
                         <div className="item-icon icon-green"><Icon name="check" size={18} /></div>
                         <div className="item-content">
-                          <div className="item-title">{s.subjectId?.name} — Sem {s.semester} {s.section}</div>
-                          <div className="item-sub">{s.departmentId?.name} • {new Date(s.date).toLocaleDateString('en-BD')}</div>
+                          <div className="item-title">{formatSubject(s.subjectId)} — Sem {s.semester} • Group {s.section}</div>
+                          <div className="item-sub">{formatDepartment(s.departmentId)} • {formatShift(s.shift || s.subjectId?.shift)} Shift • {new Date(s.date).toLocaleDateString('en-BD')}</div>
                         </div>
                         <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ textAlign: 'right' }}>

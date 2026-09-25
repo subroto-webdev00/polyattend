@@ -5,17 +5,16 @@ import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import { useAuth } from '@/context/AuthContext';
+import { formatDepartment, formatShift } from '@/lib/display';
 
 // ─── Role config ────────────────────────────────────────────────
 const ROLE_META = {
-  admin: { label: 'Super Admin', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.14)', dot: '#60a5fa' },
-  subAdmin: { label: 'Sub Admin', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.14)', dot: '#a78bfa' },
+  admin: { label: 'Admin', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.14)', dot: '#60a5fa' },
+  subAdmin: { label: 'Department Admin', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.14)', dot: '#a78bfa' },
   semesterAdmin: { label: 'Semester Admin', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.14)', dot: '#38bdf8' },
   teacher: { label: 'Teacher', color: '#34d399', bg: 'rgba(52, 211, 153, 0.14)', dot: '#34d399' },
   student: { label: 'Student', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.14)', dot: '#fbbf24' },
 };
-
-const SHIFT_LABEL = { '1st': 'Morning', '2nd': 'Day' };
 
 function initials(name) {
   return (name || '').trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -26,8 +25,8 @@ function roleLabel(role) {
 }
 
 function subInfo(u) {
-  const dept = u.departmentId?.code || u.departmentCode || null;
-  const shift = u.shift ? (SHIFT_LABEL[u.shift] || u.shift + ' Shift') : null;
+  const dept = formatDepartment(u.departmentId, u.departmentCode) || null;
+  const shift = formatShift(u.shift) ? `${formatShift(u.shift)} Shift` : null;
   if (u.role === 'student') {
     const parts = [
       dept && `${dept}`,
@@ -248,13 +247,13 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
       </td>
       <td style={{ fontSize: 12, color: 'var(--txt2)' }}>
         {user.role === 'student'
-          ? `${user.departmentId?.code || '—'} · Sem ${user.semester || '?'} · Grp ${user.section || '?'}`
-          : user.departmentId?.name || '—'}
+          ? `${formatDepartment(user.departmentId, user.departmentCode) || '—'} · Sem ${user.semester || '?'} · Grp ${user.section || '?'}`
+          : formatDepartment(user.departmentId, user.departmentCode) || '—'}
       </td>
       <td>
         {user.shift
           ? <span style={{ fontSize: 11, fontWeight: 600, color: '#a78bfa', background: 'rgba(167, 139, 250, 0.16)', padding: '2px 9px', borderRadius: 20 }}>
-            {SHIFT_LABEL[user.shift] || user.shift}
+            {formatShift(user.shift)}
           </span>
           : <span style={{ color: 'var(--txt3)' }}>—</span>}
       </td>
@@ -311,7 +310,7 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
 
 // ─── Main Component ─────────────────────────────────────────────
 export default function AdminUsers({
-  roleFilters = ['all', 'teacher', 'admin'],
+  roleFilters = ['all', 'teacher', 'allAdmins'],
   title = 'Users Management',
   subtitle = 'Manage all system users',
 }) {
@@ -327,10 +326,18 @@ export default function AdminUsers({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [roleCounts, setRoleCounts] = useState({});
+  const allAdminsCount = (roleCounts.admin || 0) + (roleCounts.subAdmin || 0) + (roleCounts.semesterAdmin || 0);
   const [countLoading, setCountLoading] = useState(true);
   const PAGE_SIZE = 50;
 
   const groupedUsers = useMemo(() => {
+    // The All Admins view is already a role-specific list. Keep all three
+    // admin roles together instead of placing a malformed admin with a
+    // section into a student "Group" heading.
+    if (roleFilter === 'allAdmins') {
+      return users.length ? [{ label: 'Admins', items: users }] : [];
+    }
+
     const withSection = {};
     const noSection = [];
     users.forEach(u => {
@@ -346,7 +353,7 @@ export default function AdminUsers({
     }));
     if (noSection.length) groups.push({ label: 'Teachers & Admins', items: noSection });
     return groups;
-  }, [users]);
+  }, [users, roleFilter]);
 
   const load = (pageToLoad = page) => {
     if (roleFilter === 'all') return; // summary view — no list needed
@@ -429,7 +436,7 @@ export default function AdminUsers({
     }
   };
 
-  const FILTER_LABELS = { all: 'All Users', browse: 'Browse', teacher: 'Teachers', admin: 'Admins' };
+  const FILTER_LABELS = { all: 'All Users', browse: 'Browse', teacher: 'Teachers', admin: 'Admins', allAdmins: 'All Admins' };
 
   // ── Summary cards shown when roleFilter === 'all' ──
   const SummaryView = () => {
@@ -437,7 +444,7 @@ export default function AdminUsers({
       { role: 'student',       label: 'Students',        icon: '🎓', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
       { role: 'teacher',       label: 'Teachers',        icon: '👨‍🏫', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
       { role: 'admin',         label: 'Super Admins',    icon: '🛡️', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-      { role: 'subAdmin',      label: 'Sub Admins',      icon: '👤', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+      { role: 'subAdmin',      label: 'Department Admins',      icon: '👤', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
       { role: 'semesterAdmin', label: 'Semester Admins', icon: '📋', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
     ];
     return (
@@ -550,9 +557,9 @@ export default function AdminUsers({
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', flex: 1 }}>
           {roleFilters.map(r => {
             const isActive = roleFilter === r;
-            const countMap = { all: roleCounts._total, browse: null, teacher: roleCounts.teacher, admin: roleCounts.admin };
+            const countMap = { all: roleCounts._total, browse: null, teacher: roleCounts.teacher, allAdmins: allAdminsCount };
             const count = countMap[r] ?? null;
-            const roleColor = { all: '#34d399', browse: '#a78bfa', teacher: '#34d399', admin: '#60a5fa' }[r] || '#94a3b8';
+            const roleColor = { all: '#34d399', browse: '#a78bfa', teacher: '#34d399', admin: '#60a5fa', allAdmins: '#60a5fa' }[r] || '#94a3b8';
             return (
               <button
                 key={r}
@@ -710,7 +717,7 @@ export default function AdminUsers({
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
         <div className="modal-title" style={{ color: 'var(--danger)' }}>Permanently Delete User</div>
         <p style={{ fontSize: 13, color: 'var(--txt2)', marginBottom: 4 }}>
-          This action <strong>cannot be undone</strong>. To confirm deleting <strong>{deleteTarget?.name}</strong>, type their name exactly below:
+          This action <strong>cannot be undone</strong>. Deleting <strong>{deleteTarget?.name}</strong> will also remove related attendance, sessions, invites, and account history. To confirm, type their name exactly below:
         </p>
         <div className="form-group">
           <input

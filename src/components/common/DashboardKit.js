@@ -2,9 +2,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Icon from './Icon';
+import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 // Shared building blocks for every role's Dashboard (home) page — Super
-// Admin, Sub Admin, Semester Admin — so they all visually match Teacher
+// Admin, Department Admin, Semester Admin — so they all visually match Teacher
 // Dashboard exactly (same dark palette, same hero/blob treatment, same
 // StatCard, same motion timing) without each page re-implementing it.
 
@@ -49,7 +50,7 @@ export function DashboardPage({ children }) {
 // Hero card — avatar, greeting, name, subtitle line, optional scope chips
 // (department/shift/semester), plus the animated gradient-blob accent.
 // `badges` is an array of short strings shown as pill chips under the name
-// (e.g. department name, shift, semester) — used by Sub Admin/Semester
+// (e.g. department name, shift, semester) — used by Department Admin/Semester
 // Admin to show their scope, which Teacher's hero doesn't need.
 export function DashboardHero({ greeting, name, subtitle, subtitleColor = 'text-slate-400', badges, rightSlot }) {
   const initial = (name || '?').trim().charAt(0).toUpperCase();
@@ -83,7 +84,7 @@ export function DashboardHero({ greeting, name, subtitle, subtitleColor = 'text-
             {badges && badges.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {badges.map((b, i) => (
-                  <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.05] border border-[#242938] text-slate-300">
+                  <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.05] border border-[#303747] text-slate-300">
                     {b}
                   </span>
                 ))}
@@ -120,7 +121,7 @@ export function StatCard({ icon, label, value, accent, index = 0 }) {
       className="relative overflow-hidden rounded-2xl border border-[#242938] bg-[#12141A] p-4 sm:p-5"
     >
       <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${a.top} to-transparent`} />
-      <div className={`w-9 h-9 rounded-lg ${a.bg} ${a.border} border flex items-center justify-center mb-3`}>
+      <div className={`w-9 h-9 rounded-lg ${a.bg} flex items-center justify-center mb-3`}>
         <Icon name={icon} size={16} className={a.text} />
       </div>
       <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">{value}</div>
@@ -139,6 +140,48 @@ export function SectionHeader({ title, action }) {
       <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">{title}</h2>
       {action}
     </div>
+  );
+}
+
+export function SubjectOverview({ subjects = [], title = 'Assigned Subjects', limit = 12 }) {
+  const visible = subjects.slice(0, limit);
+  if (visible.length === 0) return null;
+
+  return (
+    <section>
+      <SectionHeader title={`${title} (${subjects.length})`} />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {visible.map((subject, index) => (
+          <motion.div
+            key={subject._id || subject.id || `${subject.name}-${index}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.2) }}
+            className="rounded-2xl border border-[#242938] bg-[#12141A] p-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Icon name="book" size={16} className="text-amber-300" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{formatSubject(subject)}</p>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  {formatDepartment(subject.departmentId, subject.departmentCode) || 'Department unavailable'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="rounded-full bg-emerald-500/10 text-emerald-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">Sem {subject.semester}</span>
+              <span className="rounded-full bg-blue-500/10 text-blue-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">Group {subject.section}</span>
+              {subject.shift ? <span className="rounded-full bg-purple-500/10 text-purple-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">{formatShift(subject.shift)} Shift</span> : null}
+            </div>
+            {subject.teacherId?.name ? (
+              <p className="text-xs text-slate-500 mt-3">Teacher: {subject.teacherId.name}</p>
+            ) : null}
+          </motion.div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -220,7 +263,7 @@ export function RollLookup({ api }) {
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-white truncate">{result.name}</div>
             <div className="text-xs text-slate-500 truncate">
-              Roll: {result.studentId} • {result.departmentId?.code || '-'} • Sem {result.semester} • Group {result.section}
+              Roll: {result.studentId} • {formatDepartment(result.departmentId, result.departmentCode) || '-'} • {formatShift(result.shift)} Shift • Sem {result.semester} • Group {result.section}
             </div>
           </div>
           <div className="shrink-0 text-right">
