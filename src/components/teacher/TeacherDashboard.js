@@ -93,9 +93,9 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 bg-[#0A0B0F]">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 bg-transparent">
         <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full border-2 border-[#20242E]" />
+          <div className="absolute inset-0 rounded-full border-2 border-[#1C3A2B]" />
           <div className="absolute inset-0 rounded-full border-2 border-t-indigo-400 animate-spin" />
         </div>
         <p className="text-sm text-slate-500">Loading...</p>
@@ -108,7 +108,7 @@ export default function TeacherDashboard() {
   const avgAtt = totalStudents ? Math.round(totalPresent / totalStudents * 100) : 0;
 
   const firstName = user?.name?.split(' ')[0] || '';
-  const greeting = getGreeting(now);
+
   const dateStr = now.toLocaleDateString('en-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' });
   const departmentDisplay = formatDepartment(
@@ -134,15 +134,15 @@ export default function TeacherDashboard() {
   ].filter(chip => chip.text);
 
   return (
-    <div className="min-h-screen bg-[#0A0B0F] text-slate-200 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-transparent text-slate-200 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="space-y-8">
 
         {/* ---------------- HERO ---------------- */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="relative overflow-hidden rounded-2xl bg-[#12141A] p-6 sm:p-8"
+          className="relative overflow-hidden rounded-2xl bg-[#0D2419]/70 p-6 sm:p-8"
         >
           {/* subtle animated gradient accent */}
           <div
@@ -162,7 +162,6 @@ export default function TeacherDashboard() {
                 {firstName.charAt(0).toUpperCase() || 'T'}
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-indigo-400 mb-1">{greeting}</p>
                 <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
                   {firstName}
                 </h1>
@@ -208,7 +207,7 @@ export default function TeacherDashboard() {
               <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Missed Classes</h2>
               <span className="text-xs text-slate-500">(last 7 days)</span>
             </div>
-            <div className="rounded-2xl bg-amber-500/[0.04] divide-y divide-[#20242E] overflow-hidden">
+            <div className="rounded-2xl bg-amber-500/[0.04] divide-y divide-[#1C3A2B] overflow-hidden">
               {missedEntries.map(entry => {
                 const key = `${entry.subjectId}_${entry.date}`;
                 return (
@@ -282,7 +281,7 @@ export default function TeacherDashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: index * 0.05 }}
-                  className="rounded-2xl bg-[#12141A] p-4 sm:p-5"
+                  className="rounded-2xl bg-[#0D2419]/70 p-4 sm:p-5"
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
@@ -321,7 +320,7 @@ export default function TeacherDashboard() {
         {sessions.length > 0 && (
           <section>
             <SectionHeader title="Recent Sessions" />
-            <div className="rounded-2xl bg-[#12141A] divide-y divide-[#20242E] overflow-hidden">
+            <div className="rounded-2xl bg-[#0D2419]/70 divide-y divide-[#1C3A2B] overflow-hidden">
               {sessions.map((s, i) => {
                 const pct = s.totalStudents ? Math.round(s.presentCount / s.totalStudents * 100) : 0;
                 return (
@@ -368,13 +367,6 @@ export default function TeacherDashboard() {
 /*  Presentational helpers only — no data logic                      */
 /* ------------------------------------------------------------------ */
 
-function getGreeting(date) {
-  const h = date.getHours();
-  if (h < 12) return 'Good Morning';
-  if (h < 17) return 'Good Afternoon';
-  return 'Good Evening';
-}
-
 function attendanceColor(pct) {
   if (pct >= 85) return 'text-emerald-400';
   if (pct >= 60) return 'text-amber-400';
@@ -398,7 +390,7 @@ function StatCard({ icon, label, value, accent, index }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ y: -2 }}
-      className="relative overflow-hidden rounded-2xl bg-[#12141A] p-4 sm:p-5"
+      className="relative overflow-hidden rounded-2xl bg-[#0D2419]/70 p-4 sm:p-5"
     >
       <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${a.top} to-transparent`} />
       <div className={`w-9 h-9 rounded-lg ${a.bg} flex items-center justify-center mb-3`}>

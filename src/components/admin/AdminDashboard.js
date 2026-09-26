@@ -44,22 +44,9 @@ function AnimatedNumber({ value, duration = 700 }) {
   return display;
 }
 
-// Returns the current hour in Bangladesh time (UTC+6), regardless of
-// the server's or browser's own timezone.
-function getBangladeshHour(date) {
-  const bdString = date.toLocaleString('en-US', { timeZone: 'Asia/Dhaka', hour12: false, hour: '2-digit' });
-  return parseInt(bdString, 10) % 24;
-}
-
-// Returns { text, icon } based on current hour (Bangladesh time).
-function getAdminGreeting(hour) {
-  if (hour < 5) return { text: 'Good Night', icon: 'moon' };
-  if (hour < 12) return { text: 'Good Morning', icon: 'sun' };
-  if (hour < 16) return { text: 'Good Afternoon', icon: 'sun' };
-  if (hour < 19) return { text: 'Good Evening', icon: 'sunset' };
-  return { text: 'Good Evening', icon: 'moon' };
-}
-
+// The greeting ("Good Morning, Admin") moved to the top bar in AppShell,
+// so the hero no longer needs it. The live clock below is still fed by
+// `now`, which keeps ticking.
 function sessionTitle(session) {
   return `${formatSubject(session.subjectId)} — Sem ${session.semester}, Group ${session.section || '—'}`;
 }
@@ -154,12 +141,12 @@ export default function AdminDashboard() {
     { key: 'sessions', label: 'Sessions', icon: 'clipboard', accent: 'purple', value: stats.sessions },
   ];
 
-  const greeting = getAdminGreeting(getBangladeshHour(now));
+
 
   return (
     <DashboardPage>
       <DashboardHero
-        greeting={greeting.text}
+  
         name={adminName || 'Admin'}
         subtitle="Admin"
         subtitleColor="text-indigo-300"
@@ -189,7 +176,7 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.3) }}
-                  className="flex items-center gap-3 rounded-xl bg-[#12141A] px-4 py-3"
+                  className="flex items-center gap-3 rounded-xl bg-[#0D2419]/70 px-4 py-3"
                 >
                   <span className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
                     <Icon name="clipboard" size={14} />

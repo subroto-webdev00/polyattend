@@ -32,20 +32,23 @@
   --purple: #a78bfa;
   --purple-light: rgba(167, 139, 250, 0.16);
 
-  /* Neutral surfaces — dark theme, matching the Teacher dashboard palette */
-  --bg: #12141A;
-  --bg2: #0A0B0F;
-  --bg3: #1A1D26;
-  --bg4: #242938;
+  /* Neutral surfaces — deep emerald dark. Every surface is a green-black
+     rather than a neutral grey/black, so the whole app reads as one
+     emerald theme instead of "dark mode with green buttons". */
+  --bg: #0D2419;
+  --bg2: #081811;
+  --bg3: #163425;
+  --bg4: #1F4531;
 
-  /* Text */
-  --txt: #F1F5F9;
-  --txt2: #94A3B8;
-  --txt3: #64748B;
+  /* Text — slightly desaturated green-tinted whites so they harmonise
+     with the emerald canvas instead of looking like pure-white stickers */
+  --txt: #EAF5EF;
+  --txt2: #9DC0AC;
+  --txt3: #6E937F;
 
   /* Borders */
-  --border: #242938;
-  --border2: #2E3444;
+  --border: #1C3A2B;
+  --border2: #27523C;
 
   /* Shape */
   --radius: 10px;
@@ -61,19 +64,86 @@
   --sidebar-w: 260px;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   EMERALD BACKDROP — applies to every single page in the app.
+   Painted as two fixed pseudo-element layers behind the app shell:
+     layer 1 (::before) → the faint emerald grid
+     layer 2 (::after)  → the slow-breathing emerald glow
+   Both are `position: fixed`, so they stay put while inner containers
+   (.shell-content, modals) scroll their own content over the top.
+
+   The base gradient lives on <html>, NOT <body>, and deliberately
+   WITHOUT `background-attachment: fixed`. Two reasons:
+     1. <html>'s box is the whole document, so the gradient spans the
+        full scroll height. On <body> with `fixed`, the paint stops at
+        the viewport and everything below the fold falls back to the
+        default white canvas — which turned the translucent cards
+        light grey once you scrolled past one screen.
+     2. `background-color` on <html> guarantees a deep-emerald floor
+        even during overscroll, so there is never a white flash.
+   ══════════════════════════════════════════════════════════════════ */
+html {
+  background-color: #04120B;
+  background-image: linear-gradient(160deg, #05170E 0%, #082A1E 26%, #0A2C1E 52%, #06190F 76%, #04120B 100%);
+  background-repeat: no-repeat;
+  min-height: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, sans-serif;
-  background: #0A0B0F;
+  /* Solid emerald floor — the <html> gradient shows through this. */
+  background: transparent;
   color: var(--txt);
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(52, 211, 153, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 211, 153, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 900px 620px at 12% 4%, rgba(34, 197, 94, 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 820px 560px at 88% 14%, rgba(16, 185, 129, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 1100px 700px at 50% 108%, rgba(5, 150, 105, 0.22) 0%, transparent 62%),
+    radial-gradient(circle 700px 520px at 72% 58%, rgba(45, 212, 191, 0.10) 0%, transparent 55%);
+  animation: emeraldGlowPulse 9s ease-in-out infinite;
+}
+
+@keyframes emeraldGlowPulse {
+
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ===== LAYOUT ===== */
 .shell-root {
   display: flex;
   min-height: 100vh;
+  /* Sits above the body's fixed grid + glow backdrop layers */
+  position: relative;
+  z-index: 1;
 }
 
 .shell-main {
@@ -92,7 +162,7 @@ body {
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  background: #12141A;
+  background: linear-gradient(180deg, #082014 0%, #061810 60%, #05150E 100%);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -101,7 +171,7 @@ body {
   overflow: hidden;
   z-index: 150;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  border-right: none;
+  border-right: 1px solid var(--border);
 }
 
 .sidebar-logo {
@@ -109,7 +179,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 22px 18px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(39, 82, 60, 0.55);
 }
 
 /* ── Animated glowing gradient frame around the logo ──────────────
@@ -150,7 +220,7 @@ body {
 .sidebar-logo-frame .sidebar-logo {
   position: relative;
   z-index: 1;
-  background: #12141A;
+  background: #0A2116;
   border-radius: 14.5px;
   border-bottom: none;
   padding: 16px 16px;
@@ -310,7 +380,7 @@ body {
 .sidebar-footer {
   position: relative;
   z-index: 1;
-  background: #12141A;
+  background: #0A2116;
   border-radius: 14.5px;
   border-top: none;
   padding: 12px 12px;
@@ -381,17 +451,24 @@ body {
 }
 
 /* ===== TOP NAV ===== */
+/* Shown on BOTH mobile and desktop now — it carries the hamburger toggle.
+   On mobile it's burger / logo / role-tag. On desktop the role tag is
+   redundant (the sidebar footer already shows it) so it's swapped for a
+   burger on the right, and `order` sends the logo left. See the
+   min-width:768px block further down. */
 .top-nav {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #12141A;
-  border-bottom: none;
+  background: #082014;
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+  /* Reorder per breakpoint; these are the mobile defaults. */
+  gap: 10px;
 }
 
 .top-nav-logo {
@@ -402,6 +479,103 @@ body {
   font-weight: 800;
   color: #fff;
   font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Right-hand cluster: search box + role tag (mobile) + burger (desktop). */
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  order: 3;
+}
+
+/* Greeting block — the app name was removed from here; this is what the
+   top-left of the bar says instead. The subtitle is hidden on narrow
+   screens so the bar never wraps to two lines on a phone. */
+.top-nav-greeting {
+  order: 2;
+  min-width: 0;
+  flex: 1;
+}
+
+.top-nav-greeting-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.top-nav-greeting-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-nav-greeting-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--txt2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Global search — hands the query to the role's Search Profile page. */
+.top-nav-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.top-nav-search-icon {
+  position: absolute;
+  left: 10px;
+  display: flex;
+  color: var(--txt3);
+  pointer-events: none;
+}
+
+.top-nav-search-input {
+  width: 210px;
+  padding: 8px 12px 8px 32px;
+  border: 1.5px solid var(--border2);
+  border-radius: 20px;
+  background: var(--bg2);
+  color: var(--txt);
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, width 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Chrome's native search clear ("x") button renders light-on-light. */
+.top-nav-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.top-nav-search-input::placeholder {
+  color: var(--txt3);
+}
+
+.top-nav-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+  width: 260px;
+}
+
+/* The desktop burger only exists on desktop; on mobile the left-hand
+   `.menu-btn` in the header is the toggle. */
+.top-nav-burger-desktop {
+  display: none;
 }
 
 .top-nav-logo-frame {
@@ -461,12 +635,12 @@ body {
 .bottom-nav {
   display: none;
   border-top: 1px solid var(--border);
-  background: var(--bg);
+  background: #082014;
   position: sticky;
   bottom: 0;
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
 }
 
 .bnav-btn {
@@ -516,8 +690,14 @@ body {
     display: block;
   }
 
-  .top-nav {
-    display: flex;
+  /* Phones have no room for a search field next to the burger and the role
+     tag — the sidebar's "Search Profile" entry covers it there. */
+  .top-nav-search {
+    display: none;
+  }
+
+  .top-nav-greeting-sub {
+    display: none;
   }
 
   .bottom-nav {
@@ -530,7 +710,43 @@ body {
     display: flex;
   }
 
+  /* A little more breathing room now that the bar carries a greeting
+     AND a search field. */
   .top-nav {
+    padding: 10px 22px;
+    gap: 16px;
+  }
+
+  /* ── Desktop collapse (hamburger) ──────────────────────────────────
+     The sidebar keeps its place in the flex row but slides fully out of
+     view with a negative margin, so the content column expands to take
+     the full width instead of leaving a 260px hole. Animating the margin
+     (rather than `transform`) is what makes the content actually grow —
+     a transform would move the sidebar off-screen but leave its flex
+     slot empty. The matching `transition` lives at the end of this file. */
+  .shell-root.sidebar-collapsed .sidebar {
+    margin-left: calc(var(--sidebar-w) * -1);
+  }
+
+  /* Greeting goes to the left edge, search + tag + burger to the right. */
+  .top-nav-greeting {
+    order: 1;
+  }
+
+  .top-nav-right {
+    order: 2;
+  }
+
+  .top-nav-role {
+    display: none;
+  }
+
+  .top-nav-burger-desktop {
+    display: flex;
+  }
+
+  /* Mobile-only burger in the header is redundant on desktop. */
+  .top-nav > .menu-btn {
     display: none;
   }
 
@@ -542,8 +758,14 @@ body {
 /* ===== PAGE ===== */
 .page {
   padding: 20px 16px;
-  max-width: 1120px;
-  margin: 0 auto;
+  /* Full width, left-aligned. The old `max-width: 1120px; margin: 0 auto`
+     did two unwanted things on a desktop: it centred the block (leaving a
+     ~300px dead gap beside the sidebar) and capped the content so tables
+     and stat rows were cramped in the middle of a wide monitor. Now the
+     page fills the whole content column and starts right next to the
+     sidebar, with only the responsive padding keeping text off the edge. */
+  max-width: none;
+  margin: 0;
 }
 
 @media (min-width: 768px) {
@@ -641,20 +863,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a1628 0%, #0d1f0f 40%, #071a0a 70%, #060c18 100%);
+  /* Same emerald canvas the dashboard uses, so a logged-out visitor lands
+     on the same brand the logged-in pages use. */
+  background:
+    linear-gradient(160deg, #05170E 0%, #082A1E 26%, #0A2C1E 52%, #06190F 76%, #04120B 100%);
   padding: 20px;
   position: relative;
   overflow: hidden;
+  z-index: 1;
 }
 
 .auth-page::before {
-  /* faint grid overlay, identical language to Login page */
+  /* faint emerald grid — identical language to the app-wide backdrop */
   content: '';
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(52, 211, 153, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 211, 153, 0.045) 1px, transparent 1px);
   background-size: 44px 44px;
   pointer-events: none;
 }
@@ -663,9 +889,10 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 18% 15%, rgba(20, 184, 166, 0.16) 0%, transparent 55%),
-    radial-gradient(circle at 82% 85%, rgba(22, 163, 74, 0.18) 0%, transparent 55%),
-    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+  background:
+    radial-gradient(ellipse 760px 520px at 16% 10%, rgba(34, 197, 94, 0.20) 0%, transparent 62%),
+    radial-gradient(ellipse 720px 500px at 86% 88%, rgba(16, 185, 129, 0.18) 0%, transparent 62%),
+    radial-gradient(circle 620px 460px at 52% 46%, rgba(45, 212, 191, 0.08) 0%, transparent 70%);
   pointer-events: none;
   animation: authGlowPulse 6s ease-in-out infinite;
 }
@@ -718,14 +945,14 @@ body {
   --border2: rgba(255, 255, 255, 0.14);
   --primary-light: rgba(52, 211, 153, 0.14);
 
-  background: rgba(9, 18, 32, 0.96);
+  background: rgba(9, 30, 20, 0.94);
   border-radius: 20px;
   padding: 34px 30px;
   width: 100%;
   max-width: 420px;
   box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(45, 212, 191, 0.16);
+  border: 1px solid rgba(39, 82, 60, 0.7);
+  border-top-color: rgba(52, 211, 153, 0.22);
   position: relative;
   z-index: 1;
   animation: authFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -796,7 +1023,7 @@ body {
 }
 
 .auth-card .form-select option {
-  background: #0f172a;
+  background: #0A2116;
   color: #fff;
 }
 
@@ -839,8 +1066,12 @@ body {
 }
 
 /* ===== CARDS ===== */
+/* Cards are intentionally a touch translucent (no backdrop-filter — that
+   would cost real paint time on low-end phones). The backdrop glows are
+   low-frequency gradients, so they still read as "behind glass" without
+   the blur. */
 .card {
-  background: var(--bg);
+  background: rgba(15, 40, 27, 0.72);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -865,7 +1096,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg2);
+  background: rgba(5, 20, 13, 0.6);
 }
 
 .card-title {
@@ -889,7 +1120,7 @@ body {
 }
 
 .stat-card {
-  background: var(--bg);
+  background: rgba(15, 40, 27, 0.72);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px 16px;
@@ -1597,6 +1828,7 @@ body {
 /* ===== TABLE ===== */
 .table-wrap {
   overflow-x: auto;
+  background: rgba(13, 36, 25, 0.72);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
@@ -1745,7 +1977,7 @@ tbody tr:nth-child(n+7) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(3, 16, 10, 0.72);
   z-index: 200;
   display: flex;
   align-items: flex-end;
@@ -1821,7 +2053,7 @@ tbody tr:nth-child(n+7) {
 
 /* ===== QR SCANNER ===== */
 .scanner-wrap {
-  background: #0f172a;
+  background: #04150E;
   border-radius: var(--radius-lg);
   overflow: hidden;
   margin-bottom: 16px;
@@ -2032,7 +2264,7 @@ tbody tr:nth-child(n+7) {
 
 /* ===== PROFILE CARD ===== */
 .profile-card {
-  background: linear-gradient(135deg, #12141A 0%, #1a2332 50%, #0f2419 100%);
+  background: linear-gradient(135deg, #0A2016 0%, #10301F 50%, #07251A 100%);
   border-radius: var(--radius-lg);
   padding: 22px;
   color: #fff;
@@ -2151,7 +2383,7 @@ input:checked+.toggle-slider:before {
 
 /* ===== SUBJECT CARD ===== */
 .subject-card {
-  background: var(--bg);
+  background: rgba(15, 40, 27, 0.72);
   border: 2px solid var(--border2);
   border-radius: var(--radius-lg);
   padding: 16px 18px;
@@ -2430,8 +2662,15 @@ input:checked+.toggle-slider:before {
   animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Both axes are transitioned here on purpose. `transform` drives the
+   mobile off-canvas slide; `margin-left` drives the desktop hamburger
+   collapse (the sidebar slides out by a negative margin so the content
+   column actually grows). This rule sits late in the file, so it has to
+   carry both — a `transition` declared in a media query earlier up would
+   be clobbered by this one, since media queries add no specificity. */
 .sidebar {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-overlay {

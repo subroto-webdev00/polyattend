@@ -8,14 +8,6 @@ import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 // Admin, Department Admin, Semester Admin — so they all visually match Teacher
 // Dashboard exactly (same dark palette, same hero/blob treatment, same
 // StatCard, same motion timing) without each page re-implementing it.
-
-export function getGreeting(date) {
-  const h = date.getHours();
-  if (h < 12) return 'Good Morning';
-  if (h < 17) return 'Good Afternoon';
-  return 'Good Evening';
-}
-
 export const ACCENTS = {
   indigo: { text: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', top: 'from-indigo-500' },
   blue: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', top: 'from-blue-500' },
@@ -28,9 +20,9 @@ export const ACCENTS = {
 // Full-page loading state — identical to Teacher Dashboard's.
 export function DashboardLoading() {
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 bg-[#0A0B0F]">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 bg-transparent">
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-2 border-[#20242E]" />
+        <div className="absolute inset-0 rounded-full border-2 border-[#1C3A2B]" />
         <div className="absolute inset-0 rounded-full border-2 border-t-indigo-400 animate-spin" />
       </div>
       <p className="text-sm text-slate-500">Loading...</p>
@@ -38,28 +30,34 @@ export function DashboardLoading() {
   );
 }
 
-// Outer page wrapper — dark background + max-width + vertical rhythm.
+// Outer page wrapper — full-width + vertical rhythm.
+// `max-w-7xl mx-auto` was removed: it capped the content at 1280px AND
+// centred it, which left a large dead gap between the sidebar and the first
+// card on a desktop monitor. Now the dashboard fills the content column and
+// starts flush beside the sidebar, matching the `.page` wrapper.
 export function DashboardPage({ children }) {
   return (
-    <div className="min-h-screen bg-[#0A0B0F] text-slate-200 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto space-y-8">{children}</div>
+    <div className="min-h-screen bg-transparent text-slate-200 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="space-y-8">{children}</div>
     </div>
   );
 }
 
-// Hero card — avatar, greeting, name, subtitle line, optional scope chips
+// Hero card — avatar, name, subtitle line, optional scope chips
 // (department/shift/semester), plus the animated gradient-blob accent.
 // `badges` is an array of short strings shown as pill chips under the name
 // (e.g. department name, shift, semester) — used by Department Admin/Semester
 // Admin to show their scope, which Teacher's hero doesn't need.
-export function DashboardHero({ greeting, name, subtitle, subtitleColor = 'text-slate-400', badges, rightSlot }) {
+// The old `greeting` prop was dropped: the top bar now shows the greeting
+// on every page, so repeating it inside the hero was a duplicate.
+export function DashboardHero({ name, subtitle, subtitleColor = 'text-slate-400', badges, rightSlot }) {
   const initial = (name || '?').trim().charAt(0).toUpperCase();
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="relative overflow-hidden rounded-2xl border border-[#242938] bg-[#12141A] p-6 sm:p-8"
+      className="relative overflow-hidden rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-6 sm:p-8"
     >
       <div
         aria-hidden
@@ -78,7 +76,6 @@ export function DashboardHero({ greeting, name, subtitle, subtitleColor = 'text-
             {initial}
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-indigo-400 mb-1">{greeting}</p>
             <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">{name}</h1>
             {subtitle && <p className={`text-sm ${subtitleColor} mt-1 font-medium`}>{subtitle}</p>}
             {badges && badges.length > 0 && (
@@ -118,7 +115,7 @@ export function StatCard({ icon, label, value, accent, index = 0 }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ y: -2 }}
-      className="relative overflow-hidden rounded-2xl border border-[#242938] bg-[#12141A] p-4 sm:p-5"
+      className="relative overflow-hidden rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-4 sm:p-5"
     >
       <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${a.top} to-transparent`} />
       <div className={`w-9 h-9 rounded-lg ${a.bg} flex items-center justify-center mb-3`}>
@@ -157,7 +154,7 @@ export function SubjectOverview({ subjects = [], title = 'Assigned Subjects', li
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.2) }}
-            className="rounded-2xl border border-[#242938] bg-[#12141A] p-4"
+            className="rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-4"
           >
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
@@ -187,7 +184,7 @@ export function SubjectOverview({ subjects = [], title = 'Assigned Subjects', li
 
 export function EmptyState({ icon = 'users', text }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#2A2F3D] bg-[#12141A]/60 p-10 flex flex-col items-center justify-center text-center">
+    <div className="rounded-2xl border border-dashed border-[#27523C] bg-[#0D2419]/60 p-10 flex flex-col items-center justify-center text-center">
       <div className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center mb-3">
         <Icon name={icon} size={20} className="text-slate-500" />
       </div>
@@ -228,7 +225,7 @@ export function RollLookup({ api }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.1 }}
-      className="rounded-2xl border border-[#242938] bg-[#12141A] p-4 sm:p-5"
+      className="rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-4 sm:p-5"
     >
       <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Search by Roll</h2>
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -237,7 +234,7 @@ export function RollLookup({ api }) {
           value={roll}
           onChange={e => { setRoll(e.target.value); setError(''); setResult(null); }}
           placeholder="e.g. 800768"
-          className="flex-1 min-w-0 rounded-lg bg-white/[0.03] border border-[#242938] px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 transition-colors"
+          className="flex-1 min-w-0 rounded-lg bg-white/[0.03] border border-[#1C3A2B] px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 transition-colors"
         />
         <button
           type="submit"
@@ -256,7 +253,7 @@ export function RollLookup({ api }) {
       )}
 
       {result && (
-        <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#242938] bg-white/[0.02] px-4 py-3">
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#1C3A2B] bg-white/[0.02] px-4 py-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-semibold text-white shrink-0">
             {(result.name || '?').trim().charAt(0).toUpperCase()}
           </div>
@@ -287,7 +284,7 @@ export function ListRow({ icon = 'check', iconAccent = 'emerald', title, subtitl
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.3) }}
-      className="flex items-center gap-3 rounded-xl border border-[#242938] bg-[#12141A] px-4 py-3"
+      className="flex items-center gap-3 rounded-xl border border-[#1C3A2B] bg-[#0D2419]/70 px-4 py-3"
     >
       <span className={`w-8 h-8 rounded-full ${a.bg} ${a.text} flex items-center justify-center shrink-0`}>
         <Icon name={icon} size={14} />

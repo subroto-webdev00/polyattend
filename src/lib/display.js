@@ -27,3 +27,19 @@ export function formatSubject(subject) {
   const name = subject.name || 'Unknown Subject';
   return subject.code ? `${name} (${subject.code})` : name;
 }
+
+// Current hour in Bangladesh time (UTC+6), independent of whatever timezone
+// the server or visitor's browser happens to be in. TPI is in Bangladesh, so
+// "Good Morning" must follow the campus clock, not the viewer's.
+export function getBangladeshHour(date = new Date()) {
+  const bdString = date.toLocaleString('en-US', { timeZone: 'Asia/Dhaka', hour12: false, hour: '2-digit' });
+  return parseInt(bdString, 10) % 24;
+}
+
+// "Good Morning" / "Good Afternoon" / "Good Evening" for the top bar greeting.
+export function getGreetingText(date = new Date()) {
+  const h = getBangladeshHour(date);
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}

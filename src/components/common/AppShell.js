@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { blockIfSessionActive } from '@/utils/sessionGuard';
+import { getGreetingText } from '@/lib/display';
 import Icon from './Icon';
 import Modal from './Modal';
 
@@ -18,8 +19,32 @@ export default function AppShell({ navItems, children }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  // Two INDEPENDENT toggles on purpose. `sidebarOpen` drives the mobile
+  // off-canvas drawer; `sidebarCollapsed` drives the desktop hamburger.
+  // They can't share one flag because handleNav() closes the mobile drawer
+  // after every tap — if the desktop collapse reused it, the sidebar would
+  // fold shut on every single navigation.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [query, setQuery] = useState('');
+
+  // Every role already has a full "Search Profile" screen backed by the
+  // lookup APIs, so the top-bar field doesn't reimplement search — it hands
+  // the query to that page, which prefills and runs it on arrival.
+  const searchPath = navItems.find((n) => !n.section && /search/i.test(n.path || ''))?.path;
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q || !searchPath) return;
+    // Same hard block as navigation: leaving mid-session is never allowed.
+    if (blockIfSessionActive()) return;
+    router.push(`${searchPath}?q=${encodeURIComponent(q)}`);
+    setQuery('');
+    setSidebarOpen(false);
+  };
+
+  const displayRole = ROLE_LABELS[user?.role] || user?.role || '';
 
   const isActive = (path) => pathname === path || (path !== `/${user?.role}` && pathname.startsWith(path + '/'));
 
@@ -46,10 +71,9 @@ export default function AppShell({ navItems, children }) {
   };
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
-  const displayRole = ROLE_LABELS[user?.role] || user?.role || '';
 
   return (
-    <div className="shell-root">
+    <div className={`shell-root${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       {/* SIDEBAR */}
       <nav className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="sidebar-logo-frame">
@@ -111,21 +135,52 @@ export default function AppShell({ navItems, children }) {
 
       {/* MAIN */}
       <div className="shell-main">
-        {/* MOBILE TOP NAV */}
+        {/* TOP NAV — greeting + global search. Visible on mobile AND desktop. */}
         <header className="top-nav">
-          <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
+          <button
+            className="menu-btn"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
             <Icon name="menu" size={22} />
           </button>
-          <div className="top-nav-logo">
-            <div className="top-nav-logo-frame">
-              <div className="top-nav-logo-icon"><Icon name="school" size={14} /></div>
+
+          <div className="top-nav-greeting">
+            <div className="top-nav-greeting-main">
+              <span className="top-nav-greeting-text">
+                {getGreetingText()}, {displayRole}
+              </span>
+              <span className="top-nav-greeting-sub">Let&apos;s make today&apos;s attendance tracking smooth</span>
             </div>
-            PolyAttend
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className={`tag ${user?.role === 'teacher' ? 'tag-green' : user?.role === 'admin' ? 'tag-blue' : 'tag-amber'}`} style={{ fontSize: 10, textTransform: 'capitalize' }}>
+
+          <div className="top-nav-right">
+            {searchPath && (
+              <form className="top-nav-search" onSubmit={handleSearch} role="search">
+                <span className="top-nav-search-icon"><Icon name="search" size={15} /></span>
+                <input
+                  type="search"
+                  className="top-nav-search-input"
+                  placeholder={user?.role === 'student' ? 'Search by roll…' : 'Search by name…'}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search profile"
+                />
+              </form>
+            )}
+            <span className={`top-nav-role tag ${user?.role === 'teacher' ? 'tag-green' : user?.role === 'admin' ? 'tag-blue' : 'tag-amber'}`} style={{ fontSize: 10, textTransform: 'capitalize' }}>
               {displayRole}
             </span>
+            {/* Desktop hamburger: folds the sidebar away to free the width */}
+            <button
+              className="menu-btn top-nav-burger-desktop"
+              onClick={() => setSidebarCollapsed(v => !v)}
+              aria-label={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+              aria-expanded={!sidebarCollapsed}
+              title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+            >
+              <Icon name="menu" size={22} />
+            </button>
           </div>
         </header>
 

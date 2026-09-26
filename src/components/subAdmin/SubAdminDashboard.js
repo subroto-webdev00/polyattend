@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { formatDepartment, formatShift } from '@/lib/display';
 import {
   DashboardPage, DashboardLoading, DashboardHero, DashboardClock,
-  StatGrid, StatCard, SectionHeader, EmptyState, ListRow, SubjectOverview, getGreeting,
+  StatGrid, StatCard, SectionHeader, EmptyState, ListRow, SubjectOverview,
 } from '@/components/common/DashboardKit';
 
 /* ------------------------------------------------------------------ */
@@ -63,7 +63,7 @@ export default function SubAdminDashboard() {
 
   if (loading) return <DashboardLoading />;
 
-  const greeting = getGreeting(now);
+
   const badges = [
     formatDepartment(user?.departmentId, user?.departmentCode),
     formatShift(user?.shift) ? `${formatShift(user.shift)} Shift` : '',
@@ -72,7 +72,7 @@ export default function SubAdminDashboard() {
   return (
     <DashboardPage>
       <DashboardHero
-        greeting={greeting}
+
         name={user?.name}
         subtitle="Department Admin"
         subtitleColor="text-indigo-300"

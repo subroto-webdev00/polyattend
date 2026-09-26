@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { formatDepartment, formatShift } from '@/lib/display';
 import {
   DashboardPage, DashboardLoading, DashboardHero, DashboardClock,
-  StatGrid, StatCard, SubjectOverview, getGreeting,
+  StatGrid, StatCard, SubjectOverview,
 } from '@/components/common/DashboardKit';
 
 /* ------------------------------------------------------------------ */
@@ -58,7 +58,7 @@ export default function SemesterAdminDashboard() {
 
   if (loading) return <DashboardLoading />;
 
-  const greeting = getGreeting(now);
+
   const grantedSemesters = user?.semesters && user.semesters.length ? user.semesters : (user?.semester ? [user.semester] : []);
   const badges = [
     formatDepartment(user?.departmentId, user?.departmentCode),
@@ -69,7 +69,7 @@ export default function SemesterAdminDashboard() {
   return (
     <DashboardPage>
       <DashboardHero
-        greeting={greeting}
+
         name={user?.name}
         subtitle="Semester Admin"
         subtitleColor="text-indigo-300"

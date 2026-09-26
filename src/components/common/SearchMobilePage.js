@@ -1,5 +1,6 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import api from '@/utils/api';
 import Icon from './Icon';
 
@@ -10,6 +11,12 @@ import Icon from './Icon';
 //     (their layout never links here with canStaffSearch — see the
 //     `canStaffSearch` prop passed from each role's page).
 export default function SearchMobilePage({ canStaffSearch = false }) {
+  // The top-bar search field hands its query over as ?q=..., so arriving
+  // here with a query prefills the right box and runs the lookup straight
+  // away instead of making the user retype it.
+  const searchParams = useSearchParams();
+  const incoming = (searchParams.get('q') || '').trim();
+
   const [mode, setMode] = useState('student'); // student | staff
 
   const [roll, setRoll] = useState('');
@@ -22,9 +29,8 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
   const [staffResults, setStaffResults] = useState(null);
   const [staffError, setStaffError] = useState('');
 
-  const handleRollSearch = async (e) => {
-    e.preventDefault();
-    const trimmed = roll.trim();
+  const runRollSearch = useCallback(async (value) => {
+    const trimmed = (value ?? '').trim();
     if (!trimmed) return;
     setRollLoading(true);
     setRollError('');
@@ -37,11 +43,10 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
     } finally {
       setRollLoading(false);
     }
-  };
+  }, []);
 
-  const handleStaffSearch = async (e) => {
-    e.preventDefault();
-    const trimmed = name.trim();
+  const runStaffSearch = useCallback(async (value) => {
+    const trimmed = (value ?? '').trim();
     if (!trimmed) return;
     setStaffLoading(true);
     setStaffError('');
@@ -54,6 +59,27 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
     } finally {
       setStaffLoading(false);
     }
+  }, []);
+
+  // Fire the incoming query once. `autoRun` guards against a double search
+  // under React 18/19 StrictMode, which mounts effects twice in dev.
+  const autoRun = useRef(false);
+  useEffect(() => {
+    if (autoRun.current) return;
+    autoRun.current = true;
+    if (!incoming) return;
+    setRoll(incoming);
+    runRollSearch(incoming);
+  }, [incoming, runRollSearch]);
+
+  const handleRollSearch = async (e) => {
+    e.preventDefault();
+    await runRollSearch(roll);
+  };
+
+  const handleStaffSearch = async (e) => {
+    e.preventDefault();
+    await runStaffSearch(name);
   };
 
   const roleLabel = { teacher: 'Teacher', subAdmin: 'Department Admin', semesterAdmin: 'Semester Admin', admin: 'Admin' };
