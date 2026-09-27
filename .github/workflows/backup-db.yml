@@ -2,15 +2,21 @@ name: Daily database backup
 
 # Nightly dump of the Neon database into the `db-backups` branch.
 #
-# WHY THE INSTALL STEP LOOKS COMPLICATED
-# `pg_dump` refuses to dump a server that is NEWER than the client:
-#     pg_dump: error: aborting because of server version mismatch
-#     server version: 18.6 | pg_dump version: 16.15
-# ubuntu-24.04 runners ship postgresql-client-16, so a plain
-# `apt-get install postgresql-client-18` fails with
-# "Unable to locate package" — PostgreSQL 17/18 only exist in the upstream
-# PGDG repository. We add PGDG, then take the newest client available
-# (descending 19 -> 16) so this keeps working when Neon moves to 19.
+# WHY A CONTAINER INSTEAD OF `apt-get install postgresql-client-18`
+#
+#   pg_dump refuses to dump a server NEWER than the client:
+#       server version: 18.6 | pg_dump version: 16.15
+#
+# ubuntu-24.04 runners ship client 16, and PostgreSQL 17/18 live in the
+# upstream PGDG repository. Adding PGDG and trying 19/18/17/16 looked like
+# the fix but was fragile: whichever version the loop happened to land on
+# depended on what the repo happened to carry that day, and the failures
+# were swallowed by `2>/dev/null`. The job then died with a confusing
+# "server version mismatch" and no clue why.
+#
+# Running pg_dump from a matching container removes the guessing entirely:
+# the image tag pins the major version, so the client is always >= the
+# server. Bump the tag when Neon moves to a newer major.
 on:
   schedule:
     - cron: '0 21 * * *'      # 03:00 Bangladesh time
@@ -23,6 +29,10 @@ concurrency:
   group: db-backup
   cancel-in-progress: false
 
+env:
+  # Client major version. Must be >= the Neon server's major (18 right now).
+  PG_IMAGE: postgres:18-alpine
+
 jobs:
   backup:
     name: Dump and commit
@@ -34,43 +44,27 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Install a matching PostgreSQL client
+      - name: Verify the dump client
         run: |
           set -euo pipefail
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-            https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
-            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
-          sudo apt-get update -qq
+          docker run --rm "$PG_IMAGE" pg_dump --version
+          docker run --rm "$PG_IMAGE" pg_restore --version
 
-          for v in 19 18 17 16; do
-            if sudo apt-get install -y "postgresql-client-$v" 2>/dev/null; then
-              echo "Installed postgresql-client-$v"
-              break
-            fi
-          done
-
-          pg_dump --version | tee -a "$GITHUB_STEP_SUMMARY"
-          {
-            echo "\nIf the dump step below reports 'server version mismatch',"
-            echo "raise the top version in the for-loop in this file."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # `set -o pipefail` is essential on every `pg_dump | gzip` line. Without
-      # it a failing pg_dump still produces a VALID (but empty) gzip archive,
-      # the step reports success, and a broken snapshot gets committed as if
-      # it were a good backup. That is exactly what happened on the first run.
+      # `set -o pipefail` is essential on `pg_dump | gzip`. Without it a
+      # failing pg_dump still produces a VALID (but empty) gzip archive, the
+      # step reports success, and a broken snapshot gets committed as if it
+      # were a good backup - which is exactly what the first runs did.
       - name: Create schema-only dump
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -euo pipefail
           mkdir -p .backup
-          pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges \
+          docker run --rm "$PG_IMAGE" \
+            pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges \
             | gzip -9 > .backup/schema.sql.gz
 
-          # test -s is NOT enough here (see note above); verify the archive
+          # `test -s` is NOT enough (see note above) - verify the archive
           # really unzips and really contains DDL.
           gzip -t .backup/schema.sql.gz
           gzip -dc .backup/schema.sql.gz | grep -q "CREATE TABLE"
@@ -96,14 +90,25 @@ jobs:
           set -euo pipefail
           mkdir -p .backups
           STAMP=$(date -u +%Y-%m-%d)
-          # -Fc (custom format) is ~5-10x smaller than plain SQL and is what
-          # scripts/restore-db.sh feeds to pg_restore.
-          pg_dump "$DATABASE_URL" --clean --if-exists --no-owner --no-privileges -Fc \
-            --file ".backups/polyattend-${STAMP}.dump"
+          FILE="polyattend-${STAMP}.dump"
+
+          # The archive is written INSIDE the container to a mounted folder
+          # rather than piped out to stdout. Custom format (-Fc) is a
+          # seekable format, so letting it be piped would produce an
+          # archive pg_restore cannot read.
+          docker run --rm \
+            -v "$PWD/.backups:/out" \
+            "$PG_IMAGE" \
+            pg_dump "$DATABASE_URL" \
+              --clean --if-exists --no-owner --no-privileges \
+              --format=custom --file "/out/$FILE"
+
+          test -s ".backups/$FILE" || { echo "::error::dump is empty"; exit 1; }
 
           # Guard against committing an empty dump over a good one: the
           # archive index must actually list tables with data.
-          ENTRIES=$(pg_restore --list ".backups/polyattend-${STAMP}.dump" | grep -c 'TABLE DATA' || true)
+          ENTRIES=$(docker run --rm -v "$PWD/.backups:/out:ro" "$PG_IMAGE" \
+            pg_restore --list "/out/$FILE" | grep -c 'TABLE DATA' || true)
           if [ "$ENTRIES" -lt 1 ]; then
             echo "::error::dump contains no TABLE DATA entries - refusing to commit a bad backup"
             exit 1
