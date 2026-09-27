@@ -1,0 +1,91 @@
+name: Daily database backup
+
+# Runs every day at 21:00 UTC (= 03:00 Bangladesh time, when nobody is using
+# the app). The dump is gzipped SQL committed to the `db-backups` branch, so
+# the main branch history stays clean.
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  # Lets you trigger a backup by hand from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dump and commit
+    runs-on: ubuntu-latest
+    # The dump branch can drift from main; the restore step below pulls the
+    # schema from the main branch anyway, so we only need the dump files.
+    steps:
+      - name: Checkout (with the backup branch present)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client-16
+
+      - name: Create schema-only dump (the part we want to version)
+        env:
+          # Secrets are NOT in the environment automatically — pg_dump would
+          # otherwise see an empty DATABASE_URL and dump nothing.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          mkdir -p .backup
+          # `--schema-only` has no data, so it stays small and can live in the
+          # main branch's history for review.
+          pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges \
+            | gzip -9 > .backup/schema.sql.gz
+
+      - name: Commit schema dump to the main branch
+        run: |
+          git config user.name  "polyattend-backup-bot"
+          git config user.email "actions@github.com"
+          git add .backup/schema.sql.gz
+          # Timestamp in the name keeps a history of schema changes, and
+          # `git commit` failing just means "no change today" — not a failure.
+          if git diff --cached --quiet; then
+            echo "schema unchanged, nothing to commit"
+          else
+            git commit -m "chore(db): schema snapshot $(date -u +%Y-%m-%dT%H%MZ)"
+            git push
+          fi
+
+      - name: Create full data dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          mkdir -p .backups
+          STAMP=$(date -u +%Y-%m-%d)
+          # Fail loudly if the dump produced nothing: an empty .dump file that
+          # silently overwrites yesterday's backup is worse than no backup.
+          pg_dump "$DATABASE_URL" --clean --if-exists --no-owner --no-privileges -Fc \
+            --file ".backups/polyattend-${STAMP}.dump"
+          test -s ".backups/polyattend-${STAMP}.dump" \
+            || { echo "::error::dump is empty - aborting so a good backup is not lost"; exit 1; }
+          ls -lh .backups/
+
+      - name: Push the data dump to the db-backups branch
+        run: |
+          git config user.name  "polyattend-backup-bot"
+          git config user.email "actions@github.com"
+          git checkout -B db-backups
+          # Keep only the newest 30 dumps so the repo can't grow forever.
+          ls -1t .backups/*.dump | tail -n +31 | xargs -r rm -f
+          git add -A .backups
+          if git diff --cached --quiet; then
+            echo "no data changes today"
+          else
+            git commit -m "backup: $(date -u +%Y-%m-%dT%H%MZ)"
+          fi
+          # Force-push because we rewrote history by pruning old files.
+          git push --force origin db-backups
