@@ -32,7 +32,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client-16
+          sudo apt-get install -y postgresql-client-18
 
       - name: Create schema-only dump (the part we want to version)
         env:
