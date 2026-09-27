@@ -1,13 +1,20 @@
 name: Daily database backup
 
-# Runs every day at 21:00 UTC (= 03:00 Bangladesh time, when nobody is using
-# the app). The dump is gzipped SQL committed to the `db-backups` branch, so
-# the main branch history stays clean.
+# Nightly dump of the Neon database into the `db-backups` branch.
+#
+# WHY THE INSTALL STEP LOOKS COMPLICATED
+# `pg_dump` refuses to dump a server that is NEWER than the client:
+#     pg_dump: error: aborting because of server version mismatch
+#     server version: 18.6 | pg_dump version: 16.15
+# ubuntu-24.04 runners ship postgresql-client-16, so a plain
+# `apt-get install postgresql-client-18` fails with
+# "Unable to locate package" — PostgreSQL 17/18 only exist in the upstream
+# PGDG repository. We add PGDG, then take the newest client available
+# (descending 19 -> 16) so this keeps working when Neon moves to 19.
 on:
   schedule:
-    - cron: '0 21 * * *'
-  # Lets you trigger a backup by hand from the Actions tab.
-  workflow_dispatch:
+    - cron: '0 21 * * *'      # 03:00 Bangladesh time
+  workflow_dispatch:          # manual trigger from the Actions tab
 
 permissions:
   contents: write
@@ -20,39 +27,61 @@ jobs:
   backup:
     name: Dump and commit
     runs-on: ubuntu-latest
-    # The dump branch can drift from main; the restore step below pulls the
-    # schema from the main branch anyway, so we only need the dump files.
     steps:
-      - name: Checkout (with the backup branch present)
+      - name: Checkout (main branch; dumps live on the db-backups branch)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Install PostgreSQL client
+      - name: Install a matching PostgreSQL client
         run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client-18
 
-      - name: Create schema-only dump (the part we want to version)
+          for v in 19 18 17 16; do
+            if sudo apt-get install -y "postgresql-client-$v" 2>/dev/null; then
+              echo "Installed postgresql-client-$v"
+              break
+            fi
+          done
+
+          pg_dump --version | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo "\nIf the dump step below reports 'server version mismatch',"
+            echo "raise the top version in the for-loop in this file."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # `set -o pipefail` is essential on every `pg_dump | gzip` line. Without
+      # it a failing pg_dump still produces a VALID (but empty) gzip archive,
+      # the step reports success, and a broken snapshot gets committed as if
+      # it were a good backup. That is exactly what happened on the first run.
+      - name: Create schema-only dump
         env:
-          # Secrets are NOT in the environment automatically — pg_dump would
-          # otherwise see an empty DATABASE_URL and dump nothing.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -euo pipefail
           mkdir -p .backup
-          # `--schema-only` has no data, so it stays small and can live in the
-          # main branch's history for review.
           pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges \
             | gzip -9 > .backup/schema.sql.gz
 
-      - name: Commit schema dump to the main branch
+          # test -s is NOT enough here (see note above); verify the archive
+          # really unzips and really contains DDL.
+          gzip -t .backup/schema.sql.gz
+          gzip -dc .backup/schema.sql.gz | grep -q "CREATE TABLE"
+          echo "schema dump OK: $(gzip -dc .backup/schema.sql.gz | grep -c 'CREATE TABLE') CREATE TABLE statements"
+
+      - name: Commit schema snapshot to the main branch
         run: |
+          set -euo pipefail
           git config user.name  "polyattend-backup-bot"
           git config user.email "actions@github.com"
           git add .backup/schema.sql.gz
-          # Timestamp in the name keeps a history of schema changes, and
-          # `git commit` failing just means "no change today" — not a failure.
           if git diff --cached --quiet; then
             echo "schema unchanged, nothing to commit"
           else
@@ -64,28 +93,36 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -euo pipefail
           mkdir -p .backups
           STAMP=$(date -u +%Y-%m-%d)
-          # Fail loudly if the dump produced nothing: an empty .dump file that
-          # silently overwrites yesterday's backup is worse than no backup.
+          # -Fc (custom format) is ~5-10x smaller than plain SQL and is what
+          # scripts/restore-db.sh feeds to pg_restore.
           pg_dump "$DATABASE_URL" --clean --if-exists --no-owner --no-privileges -Fc \
             --file ".backups/polyattend-${STAMP}.dump"
-          test -s ".backups/polyattend-${STAMP}.dump" \
-            || { echo "::error::dump is empty - aborting so a good backup is not lost"; exit 1; }
+
+          # Guard against committing an empty dump over a good one: the
+          # archive index must actually list tables with data.
+          ENTRIES=$(pg_restore --list ".backups/polyattend-${STAMP}.dump" | grep -c 'TABLE DATA' || true)
+          if [ "$ENTRIES" -lt 1 ]; then
+            echo "::error::dump contains no TABLE DATA entries - refusing to commit a bad backup"
+            exit 1
+          fi
+          echo "dump contains $ENTRIES tables with data"
           ls -lh .backups/
 
       - name: Push the data dump to the db-backups branch
         run: |
+          set -euo pipefail
           git config user.name  "polyattend-backup-bot"
           git config user.email "actions@github.com"
           git checkout -B db-backups
-          # Keep only the newest 30 dumps so the repo can't grow forever.
-          ls -1t .backups/*.dump | tail -n +31 | xargs -r rm -f
+          # Keep only the newest 30 snapshots so the repo cannot grow forever.
+          ls -1t .backups/*.dump 2>/dev/null | tail -n +31 | xargs -r rm -f
           git add -A .backups
           if git diff --cached --quiet; then
             echo "no data changes today"
           else
             git commit -m "backup: $(date -u +%Y-%m-%dT%H%MZ)"
           fi
-          # Force-push because we rewrote history by pruning old files.
           git push --force origin db-backups

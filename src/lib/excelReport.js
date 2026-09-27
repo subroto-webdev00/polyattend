@@ -78,7 +78,7 @@ export async function buildSubjectReportExcel({ subject, students, sessions, att
     `Subject: ${subject.name} (${subject.code}) | Semester: ${subject.semester} | Shift: ${subject.shift || 'N/A'} | Teacher: ${subject.teacherId?.name || subject.teacher?.name || 'N/A'}`,
   );
 
-  ws.addRow(['#', 'Student ID', 'Name', 'Group', 'Total', 'Present', 'Absent', '%', 'Last Self?'])
+  ws.addRow(['#', 'Student ID', 'Name', 'Group', 'Total', 'Present', 'Absent', '%'])
     .eachCell((c) => (c.border = {}));
   styleHeader(ws.getRow(start));
 
@@ -88,11 +88,8 @@ export async function buildSubjectReportExcel({ subject, students, sessions, att
     const sid = String(student._id || student.id);
     const recs = attMap[sid] || {};
     let present = 0;
-    let selfCount = 0;
     for (const s of sessions) {
-      const rec = recs[String(s._id || s.id)];
-      if (rec?.status === 'present') present++;
-      if (rec?.markedBy === 'self') selfCount++;
+      if (recs[String(s._id || s.id)]?.status === 'present') present++;
     }
     const pct = pctOf(present, total);
     const row = ws.addRow([
@@ -104,7 +101,6 @@ export async function buildSubjectReportExcel({ subject, students, sessions, att
       present,
       total - present,
       pct / 100,
-      selfCount > 0 ? `${selfCount}x Self` : '-',
     ]);
     row.getCell(8).numFmt = '0%';
     if (pct >= 75) row.getCell(8).font = { color: { argb: GREEN }, bold: true };
@@ -143,11 +139,9 @@ export async function buildSessionReportExcel({ session, allStudents, presentMap
       student.section || '',
       status,
     ]);
-    const isSelf = rec?.markedBy === 'self';
     row.getCell(5).font = status === 'present'
       ? { color: { argb: GREEN }, bold: true }
       : { color: { argb: 'FFB91C1C' } };
-    if (isSelf) row.getCell(5).value = 'present (self)';
   });
 
   styleBody(ws, start + 1);
@@ -196,21 +190,15 @@ export async function buildStudentReportExcel({ student, bySubject, records }) {
     'Date-wise Records',
     `${student.name} (${student.studentId || ''}) - ${records.length} record(s)`,
   );
-  det.addRow(['Date', 'Subject', 'Code', 'Status', 'Method']);
+  det.addRow(['Date', 'Subject', 'Code', 'Status']);
   styleHeader(det.getRow(dstart));
 
   for (const r of records) {
-    const method = r.status !== 'present'
-      ? '-'
-      : r.markedBy === 'self' ? 'Self'
-      : r.markedBy === 'manual' ? 'Manual'
-      : r.markedBy === 'search' ? 'Search' : '-';
     const row = det.addRow([
       new Date(r.date).toLocaleDateString('en-BD'),
       r.subjectId?.name || '-',
       r.subjectId?.code || '-',
       r.status,
-      method,
     ]);
     row.getCell(4).font = r.status === 'present'
       ? { color: { argb: GREEN }, bold: true }
