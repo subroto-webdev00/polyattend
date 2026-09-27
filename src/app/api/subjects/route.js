@@ -35,8 +35,6 @@ export async function GET(request) {
       where.section = auth.user.section;
       if (auth.user.shift) where.shift = auth.user.shift;
     }
-    if (auth.user.role === 'subAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
-    if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; where.semester = { in: auth.user.semesters || [] }; }
     if (searchParams.get('departmentId')) where.departmentId = searchParams.get('departmentId');
     if (searchParams.get('shift')) where.shift = searchParams.get('shift');
     if (searchParams.get('semester')) where.semester = parseInt(searchParams.get('semester'));
@@ -50,14 +48,16 @@ export async function GET(request) {
       where.section = auth.user.section;
       if (auth.user.shift) where.shift = auth.user.shift;
     }
-    if (auth.user.role === 'subAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
-    if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; where.semester = { in: auth.user.semesters || [] }; }
+    // Semester Admin is department-wide: own Department + Shift, every
+    // Semester. The old `semester: { in: auth.user.semesters }` narrowing
+    // belonged to the old role split.
+    if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
     const subjects = await prisma.subject.findMany({ where, include: subjInclude, orderBy: { name: 'asc' } });
     return NextResponse.json({ success: true, subjects: subjects.map(normalizeSubject) });
   } catch (error) { return errorResponse(error); }
 }
 export async function POST(request) {
-  const auth = await requireAuth(request, ['admin', 'subAdmin', 'semesterAdmin']);
+  const auth = await requireAuth(request, ['admin', 'semesterAdmin']);
   if (auth.error) return auth.error;
   try {
     const body = await request.json();

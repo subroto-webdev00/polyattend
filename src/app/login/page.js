@@ -47,7 +47,7 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [activeRole, setActiveRole] = useState('student');
 
-  // 2FA step (Admin / Department Admin / Semester Admin only): after
+  // 2FA step (Admin / Semester Admin only): after
   // password verification, the account gets emailed an OTP and this page
   // switches to asking for it instead of granting a token immediately.
   const [otpStep, setOtpStep] = useState(false);

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
+import { wantsJson, wantsPdf, fileResponse } from '@/lib/reportResponse';
+import { buildStudentReportPDF } from '@/lib/pdfReport';
+import { buildStudentReportExcel } from '@/lib/excelReport';
 export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
   const auth = await requireAuth(request);
@@ -26,13 +29,44 @@ export async function GET(request, { params }) {
     });
     const settings = await prisma.settings.findFirst({ where: { key: 'global' } });
     const threshold = settings?.attendanceThreshold ?? 70;
+    // Performance: the summary used to re-scan the entire history for every
+    // subject (`subjects.map(sub => records.filter(...))` = subjects x records).
+    // Grouping once by subjectId makes it a single pass. Output is identical.
+    const statsBySubject = new Map();
+    for (const r of records) {
+      let s = statsBySubject.get(r.subjectId);
+      if (!s) { s = { total: 0, present: 0 }; statsBySubject.set(r.subjectId, s); }
+      s.total += 1;
+      if (r.status === 'present') s.present += 1;
+    }
     const summary = subjects.map(sub => {
-      const subRecords = records.filter(r => r.subjectId === sub.id);
-      const total = subRecords.length;
-      const present = subRecords.filter(r => r.status === 'present').length;
+      const { total, present } = statsBySubject.get(sub.id) || { total: 0, present: 0 };
       const pct = total ? Math.round((present / total) * 100) : 0;
       return { subject: sub, total, present, absent: total - present, percentage: pct, belowThreshold: pct < threshold && total > 0 };
     });
-    return NextResponse.json({ success: true, student, summary, records, threshold });
+
+    if (wantsJson(request)) {
+      return NextResponse.json({ success: true, student, summary, records, threshold });
+    }
+
+    // The report builders index by subject, keyed on the subject id.
+    const bySubject = {};
+    for (const s of summary) {
+      bySubject[String(s.subject.id)] = { subject: s.subject, total: s.total, present: s.present, absent: s.absent };
+    }
+    // The per-record subject label is read as `subjectId` by the builders.
+    const labelledRecords = records.map(r => ({
+      ...r,
+      subjectId: r.subjectId,
+      subject: subjects.find(s => s.id === r.subjectId) || null,
+    }));
+
+    const baseName = `student_${student.studentId || 'report'}_report`;
+    if (wantsPdf(request)) {
+      const buffer = await buildStudentReportPDF({ student, bySubject, records: labelledRecords });
+      return fileResponse(buffer, baseName, 'pdf');
+    }
+    const buffer = await buildStudentReportExcel({ student, bySubject, records: labelledRecords });
+    return fileResponse(buffer, baseName, 'xlsx');
   } catch (error) { return errorResponse(error); }
 }

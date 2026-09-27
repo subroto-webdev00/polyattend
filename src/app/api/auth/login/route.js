@@ -8,7 +8,7 @@ import { checkRateLimit } from '@/lib/rateLimit';
 export const dynamic = 'force-dynamic';
 
 const TWO_FA_ENABLED = false;
-const REQUIRES_2FA = TWO_FA_ENABLED ? ['admin', 'subAdmin', 'semesterAdmin'] : [];
+const REQUIRES_2FA = TWO_FA_ENABLED ? ['admin', 'semesterAdmin'] : [];
 
 function generateOTP() { return crypto.randomInt(100000, 1000000).toString(); }
 

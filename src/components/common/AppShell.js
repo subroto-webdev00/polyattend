@@ -9,7 +9,6 @@ import Modal from './Modal';
 
 const ROLE_LABELS = {
   admin: 'Admin',
-  subAdmin: 'Department Admin',
   semesterAdmin: 'Semester Admin',
   teacher: 'Teacher',
   student: 'Student',

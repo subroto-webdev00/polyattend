@@ -6,7 +6,7 @@ import { generateInviteCode, oneMonthFromNow } from '@/lib/inviteCode';
 import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export async function GET(request) {
-  const auth = await requireAuth(request, ['subAdmin']);
+  const auth = await requireAuth(request, ['semesterAdmin']);
   if (auth.error) return auth.error;
   try {
     const semAdmins = await prisma.user.findMany({
@@ -29,7 +29,7 @@ export async function GET(request) {
   } catch (error) { return errorResponse(error); }
 }
 export async function POST(request) {
-  const auth = await requireAuth(request, ['subAdmin']);
+  const auth = await requireAuth(request, ['semesterAdmin']);
   if (auth.error) return auth.error;
   try {
     const { name, email, semester } = await request.json();

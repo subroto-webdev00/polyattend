@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import PersonCard, { PersonCardGrid } from '@/components/common/PersonCard';
 import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
-import { useAuth } from '@/context/AuthContext';
 
 const GROUPS = ['A', 'B', 'C', 'D'];
 const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -16,19 +15,16 @@ const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 const getRecordId = record => record?.id || record?._id;
 
 export default function SemesterAdminTeachers() {
-  const { user } = useAuth();
   // MULTI-SEMESTER ADMIN: which Semester a new Subject/Teacher is being
   // assigned to is now an explicit choice — no longer implicitly "the
   // Semester Admin's one semester". Only shown as a selector once this
   // admin actually has more than one granted Semester; with just one, it's
   // used automatically and the form stays exactly as simple as before.
-  // Department Admin (`subAdmin`) has no `semesters`/`semester` scope at
-  // all — they may assign within any Semester of their Department, so they
-  // always get the full picker rather than the Semester Admin's granted list.
-  const isSubAdmin = user?.role === 'subAdmin';
-  const allowedSemesters = isSubAdmin
-    ? ALL_SEMESTERS
-    : (user?.semesters && user.semesters.length ? user.semesters : (user?.semester ? [user.semester] : []));
+  // Semester Admin is department-wide, so they may assign within any
+  // Semester of their Department and always get the full picker. The old
+  // narrower list (their own granted semesters) belonged to the removed
+  // old role split.
+  const allowedSemesters = ALL_SEMESTERS;
   const [teachers, setTeachers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [loading, setLoading] = useState(true);

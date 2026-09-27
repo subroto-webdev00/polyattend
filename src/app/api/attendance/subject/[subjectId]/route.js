@@ -3,7 +3,7 @@ import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
-  const auth = await requireAuth(request, ['teacher','admin','subAdmin','semesterAdmin']);
+  const auth = await requireAuth(request, ['teacher','admin','semesterAdmin']);
   if (auth.error) return auth.error;
   try {
     const { subjectId } = await params;

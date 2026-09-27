@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
   timeout: 15000,
-  withCredentials: true, // cookie automatically পাঠাবে প্রতিটা request-এ
+  withCredentials: true, // send the auth cookie on every request
   headers: { 'Content-Type': 'application/json' },
 });
 

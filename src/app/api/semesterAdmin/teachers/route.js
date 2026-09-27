@@ -6,7 +6,7 @@ import { generateInviteCode, oneMonthFromNow } from '@/lib/inviteCode';
 import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export async function GET(request) {
-  const auth = await requireAuth(request, ['semesterAdmin', 'subAdmin', 'admin']);
+  const auth = await requireAuth(request, ['semesterAdmin', 'admin']);
   if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
@@ -45,7 +45,7 @@ export async function GET(request) {
   } catch (error) { return errorResponse(error); }
 }
 export async function POST(request) {
-  const auth = await requireAuth(request, ['semesterAdmin', 'subAdmin', 'admin']);
+  const auth = await requireAuth(request, ['semesterAdmin', 'admin']);
   if (auth.error) return auth.error;
   try {
     const body = await request.json();
@@ -57,7 +57,7 @@ export async function POST(request) {
     const semesterNum = Number(semester);
     const requestedShift = auth.user.role === 'admin' ? body.shift : auth.user.shift;
     const shift = requestedShift === '1st' ? 'first' : requestedShift === '2nd' ? 'second' : requestedShift;
-    // Department Admin (`subAdmin`) is scoped to their own Department,
+    // Semester Admin is scoped to their own Department,
     // same as Semester Admin — only top-level `admin` may target an
     // arbitrary Department via the request body.
     const departmentId = auth.user.role === 'admin' ? body.departmentId : auth.user.departmentId;

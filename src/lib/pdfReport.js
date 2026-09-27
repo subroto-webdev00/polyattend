@@ -17,11 +17,8 @@ import PDFDocument from 'pdfkit';
 // is possible later if needed, but is a separate, larger change.
 
 const GREEN = '#1a6b4a';
-const GREEN_LIGHT = '#d1fae5';
 const AMBER = '#92400e';
-const AMBER_LIGHT = '#fef3c7';
 const RED = '#991b1b';
-const RED_LIGHT = '#fee2e2';
 const GRAY = '#64748b';
 const SECTION_BG = '#e2e8f0';
 const SECTION_TEXT = '#1e293b';
@@ -49,10 +46,9 @@ function header(doc, title, subtitleLines) {
   doc.moveDown(0.6);
 }
 
-function legend(doc, text) {
-  doc.font('Helvetica-Oblique').fontSize(8).fillColor(GRAY).text(text);
-  doc.moveDown(0.5);
-}
+// `legend()` was removed along with the "Last Self?" column: the only two
+// things it ever explained were the self-marking marker and the Group
+// grouping, and the grouping is self-evident from the "Group: X" rows.
 
 const tableWidth = (columns) => columns.reduce((sum, c) => sum + c.width, 0);
 
@@ -132,14 +128,22 @@ function groupRowsBySection(rows) {
 }
 
 // ── Subject report: one row per student, grouped by Section ───────────────
+// `subject` is accepted in either the old populated shape
+// (`subject.departmentId.name`) or the current Prisma shape
+// (`subject.department.name` / `subject.teacher.name`) — this file was
+// written before the Prisma migration and was never updated, which is why
+// nothing imported it. The same tolerance is applied to the session and
+// student builders below.
 export async function buildSubjectReportPDF({ subject, students, sessions, attMap }) {
   const doc = newDoc();
   const bufferPromise = streamToBuffer(doc);
 
-  header(doc, `ATTENDANCE REPORT - ${subject.departmentId.name}`, [
-    `Subject: ${subject.name} (${subject.code}) | Semester: ${subject.semester} | Shift: ${subject.shift || 'N/A'} | Teacher: ${subject.teacherId?.name || 'N/A'}`,
+  const deptName = subject.departmentId?.name || subject.department?.name || 'N/A';
+  const teacherName = subject.teacherId?.name || subject.teacher?.name || 'N/A';
+
+  header(doc, `ATTENDANCE REPORT - ${deptName}`, [
+    `Subject: ${subject.name} (${subject.code}) | Semester: ${subject.semester} | Shift: ${subject.shift || 'N/A'} | Teacher: ${teacherName}`,
   ]);
-  legend(doc, 'Legend:  "Self" in Last Self? = student self-marked at least one class themselves.   Students are grouped by Group.');
 
   const columns = [
     { key: 'idx', label: '#', width: 24, align: 'center' },
@@ -149,17 +153,18 @@ export async function buildSubjectReportPDF({ subject, students, sessions, attMa
     { key: 'present', label: 'Present', width: 50, align: 'center' },
     { key: 'absent', label: 'Absent', width: 46, align: 'center' },
     { key: 'pct', label: '%', width: 42, align: 'center' },
-    { key: 'method', label: 'Last Self?', width: 68, align: 'center' },
   ];
 
   const rows = students.map((student, idx) => {
-    const sid = student._id.toString();
+    const sid = String(student._id ?? student.id);
     const recs = attMap[sid] || {};
     const total = sessions.length;
-    const present = sessions.filter((s) => recs[s._id.toString()]?.status === 'present').length;
+    let present = 0;
+    for (const s of sessions) {
+      if (recs[String(s._id ?? s.id)]?.status === 'present') present += 1;
+    }
     const absent = total - present;
     const pct = total ? Math.round((present / total) * 100) : 0;
-    const selfCount = sessions.filter((s) => recs[s._id.toString()]?.markedBy === 'self').length;
 
     const pctColor = pct >= 75 ? GREEN : pct >= 60 ? AMBER : RED;
 
@@ -173,15 +178,28 @@ export async function buildSubjectReportPDF({ subject, students, sessions, attMa
         present,
         absent,
         pct: `${pct}%`,
-        method: selfCount > 0 ? `${selfCount}x Self` : '-',
       },
-      cellColors: { pct: pctColor, method: selfCount > 0 ? AMBER : GRAY },
+      cellColors: { pct: pctColor },
     };
   });
 
   drawTable(doc, { columns, rows: groupRowsBySection(rows), startX: doc.page.margins.left });
 
-  doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`Total Students: ${students.length}  |  Total Classes: ${sessions.length}  |  Generated: ${new Date().toLocaleString('en-BD')}`);
+  // Pin the cursor back to the left margin before writing the footer.
+  // drawTable leaves `doc.x` sitting at the last cell (the table's right
+  // edge), so without this the footer starts mid-page and wraps onto
+  // several short lines instead of one line under the table.
+  const left = doc.page.margins.left;
+  const contentWidth = doc.page.width - left - doc.page.margins.right;
+  doc.font('Helvetica').fontSize(8).fillColor(GRAY);
+  doc.x = left;
+  doc.y += 6;
+  doc.text(
+    `Total Students: ${students.length}   |   Total Classes: ${sessions.length}   |   Generated: ${new Date().toLocaleString('en-BD')}`,
+    left,
+    doc.y,
+    { width: contentWidth, align: 'left' },
+  );
 
   doc.end();
   return bufferPromise;
@@ -192,33 +210,30 @@ export async function buildSessionReportPDF({ session, allStudents, presentMap }
   const doc = newDoc();
   const bufferPromise = streamToBuffer(doc);
 
-  header(doc, `${session.departmentId.name} - Attendance Sheet`, [
-    `Subject: ${session.subjectId?.name || 'N/A'} | Semester: ${session.semester} | Shift: ${session.shift || 'N/A'} | Date: ${new Date(session.date).toLocaleDateString('en-BD')} | Teacher: ${session.teacherId?.name || 'N/A'}`,
+  const deptName = session.departmentId?.name || session.department?.name || 'N/A';
+  const subjectName = session.subjectId?.name || session.subject?.name || 'N/A';
+  const teacherName = session.teacherId?.name || session.teacher?.name || 'N/A';
+
+  header(doc, `${deptName} - Attendance Sheet`, [
+    `Subject: ${subjectName} | Semester: ${session.semester} | Shift: ${session.shift || 'N/A'} | Date: ${new Date(session.date).toLocaleDateString('en-BD')} | Teacher: ${teacherName}`,
   ]);
-  legend(doc, 'Legend:  Self = student self-marked their own attendance.   Students are grouped by Group.');
 
   const columns = [
     { key: 'idx', label: '#', width: 26, align: 'center' },
     { key: 'studentId', label: 'Student ID', width: 76 },
     { key: 'name', label: 'Name', width: 150 },
     { key: 'status', label: 'Status', width: 60, align: 'center' },
-    { key: 'method', label: 'Method', width: 70, align: 'center' },
     { key: 'time', label: 'Marked Time', width: 90, align: 'center' },
   ];
 
-  const methodLabel = (markedBy) => {
-    switch (markedBy) {
-      case 'self': return 'Self';
-      case 'manual': return 'Manual';
-      case 'search': return 'Search';
-      default: return '-';
-    }
-  };
+  // presentMap is keyed sessionId -> studentId -> mark, matching the shape
+  // the route builds (and the Excel builder).
+  const sessionKey = String(session._id ?? session.id);
+  const marks = presentMap[sessionKey] || {};
 
   const rows = allStudents.map((student, idx) => {
-    const rec = presentMap[student._id.toString()];
+    const rec = marks[String(student._id ?? student.id)];
     const isPresent = !!rec && rec.status === 'present';
-    const isSelf = isPresent && rec.markedBy === 'self';
     return {
       groupKey: student.section,
       cells: {
@@ -226,22 +241,32 @@ export async function buildSessionReportPDF({ session, allStudents, presentMap }
         studentId: student.studentId,
         name: student.name,
         status: isPresent ? 'Present' : 'Absent',
-        method: isPresent ? methodLabel(rec.markedBy) : '-',
         time: rec?.scannedAt ? new Date(rec.scannedAt).toLocaleTimeString('en-BD') : '-',
       },
       cellColors: {
         status: isPresent ? GREEN : RED,
-        method: isSelf ? AMBER : GRAY,
       },
     };
   });
 
-  const presentCount = Object.values(presentMap).filter((a) => a.status === 'present').length;
+  // Count from `marks` (this session's marks), not from `presentMap`:
+  // presentMap is keyed sessionId -> studentId, so Object.values on it
+  // yields one object per SESSION, not per mark, and the count came out 0.
+  const presentCount = Object.values(marks).filter((m) => m && m.status === 'present').length;
 
   drawTable(doc, { columns, rows: groupRowsBySection(rows), startX: doc.page.margins.left });
 
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(TEXT)
-    .text(`Total: ${allStudents.length}   Present: ${presentCount}   Absent: ${allStudents.length - presentCount}   Percentage: ${allStudents.length ? Math.round((presentCount / allStudents.length) * 100) : 0}%`);
+  // Same left-margin fix as the subject report: drawTable leaves doc.x at the
+  // table's right edge, which would wrap this line onto several lines.
+  const sLeft = doc.page.margins.left;
+  doc.x = sLeft;
+  doc.y += 6;
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(TEXT).text(
+    `Total: ${allStudents.length}   Present: ${presentCount}   Absent: ${allStudents.length - presentCount}   Percentage: ${allStudents.length ? Math.round((presentCount / allStudents.length) * 100) : 0}%`,
+    sLeft,
+    doc.y,
+    { width: doc.page.width - sLeft - doc.page.margins.right, align: 'left' },
+  );
 
   doc.end();
   return bufferPromise;
@@ -252,8 +277,9 @@ export async function buildStudentReportPDF({ student, bySubject, records }) {
   const doc = newDoc();
   const bufferPromise = streamToBuffer(doc);
 
+  const deptName = student.departmentId?.name || student.department?.name || 'N/A';
   header(doc, `STUDENT ATTENDANCE REPORT`, [
-    `${student.name} (${student.studentId}) | ${student.departmentId?.name || 'N/A'} | Semester: ${student.semester} | Group: ${student.section}`,
+    `${student.name} (${student.studentId}) | ${deptName} | Semester: ${student.semester} | Group: ${student.section}`,
   ]);
 
   doc.font('Helvetica-Bold').fontSize(11).fillColor(GREEN).text('Subject-wise Summary');
@@ -285,19 +311,18 @@ export async function buildStudentReportPDF({ student, bySubject, records }) {
     { key: 'subject', label: 'Subject', width: 150 },
     { key: 'code', label: 'Code', width: 60 },
     { key: 'status', label: 'Status', width: 60, align: 'center' },
-    { key: 'method', label: 'Method', width: 70, align: 'center' },
   ];
   const recordRows = records.map((r) => ({
     cells: {
       date: new Date(r.date).toLocaleDateString('en-BD'),
-      subject: r.subjectId?.name || '-',
-      code: r.subjectId?.code || '-',
+      // Accept both the populated relation (`subjectId`) and the Prisma key
+      // (`subject`), since the two report paths normalise differently.
+      subject: r.subjectId?.name || r.subject?.name || '-',
+      code: r.subjectId?.code || r.subject?.code || '-',
       status: r.status,
-      method: r.status !== 'present' ? '-' : r.markedBy === 'self' ? 'Self' : r.markedBy === 'manual' ? 'Manual' : r.markedBy === 'search' ? 'Search' : '-',
     },
     cellColors: {
       status: r.status === 'present' ? GREEN : RED,
-      method: r.markedBy === 'self' ? AMBER : GRAY,
     },
   }));
   drawTable(doc, { columns: recordColumns, rows: recordRows, startX: doc.page.margins.left });

@@ -24,7 +24,7 @@ export function normalizeSemesterAdmin(user) {
   return user;
 }
 
-// departmentId populate shape — routes এ reuse করা হয়
+// Shared "departmentId populate" shapes, reused across the report routes.
 export const deptSelect = { id: true, name: true, code: true };
 export const subjSelect = { id: true, name: true, code: true, semester: true, section: true, shift: true };
 export const teacherSelect = { id: true, name: true, email: true, mobile: true };

@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    // Admin / Department Admin / Semester Admin: no token yet — an OTP was
+    // Admin / Semester Admin: no token yet — an OTP was
     // just emailed and the caller (login page) must show the OTP step and
     // call verifyLoginOtp() to actually get a token.
     if (res.data.requiresOtp) {

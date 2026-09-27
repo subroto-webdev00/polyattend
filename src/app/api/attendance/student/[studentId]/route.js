@@ -60,20 +60,47 @@ export async function GET(request, { params }) {
       if (endDate) where.date.lte = new Date(endDate);
     }
 
-    const records = await prisma.attendance.findMany({
+    // ── Performance fix ────────────────────────────────────────────────
+    // This pulled `subject` (plus its department) and `session` for EVERY
+    // attendance row, so a senior student's history re-transferred the same
+    // handful of subject/department objects once per row — three joins and
+    // hundreds of duplicated objects per request.
+    //
+    // Now the rows come back lean (foreign keys only) and the distinct
+    // subjects/sessions are fetched once, then re-attached. The JSON the
+    // student dashboard receives is unchanged.
+    const leanRecords = await prisma.attendance.findMany({
       where,
-      include: {
-        subject: {
-          select: {
-            id: true, name: true, code: true, semester: true,
-            section: true, shift: true,
-            department: { select: { id: true, name: true, code: true } },
-          },
-        },
-        session: { select: { id: true, date: true, startTime: true } },
-      },
       orderBy: { date: 'desc' },
     });
+
+    const subjectIds = [...new Set(leanRecords.map(r => r.subjectId).filter(Boolean))];
+    const sessionIds = [...new Set(leanRecords.map(r => r.sessionId).filter(Boolean))];
+
+    const [subjectRows, sessionRows] = await Promise.all([
+      subjectIds.length
+        ? prisma.subject.findMany({
+            where: { id: { in: subjectIds } },
+            select: {
+              id: true, name: true, code: true, semester: true,
+              section: true, shift: true,
+              department: { select: { id: true, name: true, code: true } },
+            },
+          })
+        : Promise.resolve([]),
+      sessionIds.length
+        ? prisma.session.findMany({ where: { id: { in: sessionIds } }, select: { id: true, date: true, startTime: true } })
+        : Promise.resolve([]),
+    ]);
+
+    const subjectById = new Map(subjectRows.map(s => [s.id, s]));
+    const sessionById = new Map(sessionRows.map(s => [s.id, s]));
+
+    const records = leanRecords.map(record => ({
+      ...record,
+      subject: subjectById.get(record.subjectId) || null,
+      session: sessionById.get(record.sessionId) || null,
+    }));
 
     const normalizedRecords = records.map(record => ({
       ...withLegacyIds(record),

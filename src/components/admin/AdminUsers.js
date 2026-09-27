@@ -10,7 +10,6 @@ import { formatDepartment, formatShift } from '@/lib/display';
 // ─── Role config ────────────────────────────────────────────────
 const ROLE_META = {
   admin: { label: 'Admin', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.14)', dot: '#60a5fa' },
-  subAdmin: { label: 'Department Admin', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.14)', dot: '#a78bfa' },
   semesterAdmin: { label: 'Semester Admin', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.14)', dot: '#38bdf8' },
   teacher: { label: 'Teacher', color: '#34d399', bg: 'rgba(52, 211, 153, 0.14)', dot: '#34d399' },
   student: { label: 'Student', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.14)', dot: '#fbbf24' },
@@ -326,7 +325,7 @@ export default function AdminUsers({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [roleCounts, setRoleCounts] = useState({});
-  const allAdminsCount = (roleCounts.admin || 0) + (roleCounts.subAdmin || 0) + (roleCounts.semesterAdmin || 0);
+  const allAdminsCount = (roleCounts.admin || 0) + (roleCounts.semesterAdmin || 0);
   const [countLoading, setCountLoading] = useState(true);
   const PAGE_SIZE = 50;
 
@@ -377,7 +376,7 @@ export default function AdminUsers({
   // Fetch per-role counts + grand total once on mount
   useEffect(() => {
     setCountLoading(true);
-    const roles = ['student', 'teacher', 'admin', 'subAdmin', 'semesterAdmin'];
+    const roles = ['student', 'teacher', 'admin', 'semesterAdmin'];
     Promise.all([
       // grand total
       api.get('/users', { params: { limit: 1 } })
@@ -444,7 +443,6 @@ export default function AdminUsers({
       { role: 'student',       label: 'Students',        icon: '🎓', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
       { role: 'teacher',       label: 'Teachers',        icon: '👨‍🏫', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
       { role: 'admin',         label: 'Super Admins',    icon: '🛡️', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-      { role: 'subAdmin',      label: 'Department Admins',      icon: '👤', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
       { role: 'semesterAdmin', label: 'Semester Admins', icon: '📋', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
     ];
     return (

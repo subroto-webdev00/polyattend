@@ -4,11 +4,11 @@ import { requireAuth, errorResponse } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_ROLES = ['admin', 'subAdmin', 'semesterAdmin'];
-const USER_ROLES = ['admin', 'subAdmin', 'semesterAdmin', 'teacher', 'student'];
+const ADMIN_ROLES = ['admin', 'semesterAdmin'];
+const USER_ROLES = ['admin', 'semesterAdmin', 'teacher', 'student'];
 
 export async function GET(request) {
-  const auth = await requireAuth(request, ['admin', 'subAdmin', 'semesterAdmin', 'teacher']);
+  const auth = await requireAuth(request, ['admin', 'semesterAdmin', 'teacher']);
   if (auth.error) return auth.error;
 
   try {
@@ -18,7 +18,7 @@ export async function GET(request) {
 
     // `allAdmins` is a UI-level group, not a database Role enum value. Keep
     // `role=admin` exact for existing consumers while allowing the Users page
-    // to show Super Admin + Department Admin + Semester Admin together.
+    // to show Super Admin + Semester Admin together.
     if (requestedRole === 'allAdmins') {
       where.role = { in: ADMIN_ROLES };
     } else if (requestedRole) {
@@ -42,14 +42,13 @@ export async function GET(request) {
       ];
     }
 
-    if (auth.user.role === 'subAdmin') {
-      where.departmentId = auth.user.departmentId;
-      where.shift = auth.user.shift;
-    }
     if (auth.user.role === 'semesterAdmin') {
+      // Department-wide: a Semester Admin now sees their entire department
+      // + shift, not just the semesters on their own account. The old
+      // `where.semester = { in: auth.user.semesters }` restriction came from
+      // the old role split and no longer applies.
       where.departmentId = auth.user.departmentId;
       where.shift = auth.user.shift;
-      if (!where.semester) where.semester = { in: auth.user.semesters || [] };
     }
 
     // Dashboard callers only need the matching number, not full user

@@ -5,7 +5,7 @@ import Icon from './Icon';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 // Shared building blocks for every role's Dashboard (home) page — Super
-// Admin, Department Admin, Semester Admin — so they all visually match Teacher
+// Admin and Semester Admin - so they both visually match Teacher
 // Dashboard exactly (same dark palette, same hero/blob treatment, same
 // StatCard, same motion timing) without each page re-implementing it.
 export const ACCENTS = {
@@ -46,7 +46,7 @@ export function DashboardPage({ children }) {
 // Hero card — avatar, name, subtitle line, optional scope chips
 // (department/shift/semester), plus the animated gradient-blob accent.
 // `badges` is an array of short strings shown as pill chips under the name
-// (e.g. department name, shift, semester) — used by Department Admin/Semester
+// (e.g. department name, shift, semester) — used by Semester
 // Admin to show their scope, which Teacher's hero doesn't need.
 // The old `greeting` prop was dropped: the top bar now shows the greeting
 // on every page, so repeating it inside the hero was a duplicate.

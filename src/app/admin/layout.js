@@ -6,7 +6,7 @@ const navItems = [
   { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
   { section: 'Management' },
   { label: 'Users', icon: 'users', path: '/admin/users' },
-  { label: 'Department Admin', icon: 'users', path: '/admin/sub-admins' },
+  { label: 'Semester Admins', icon: 'users', path: '/admin/semester-admins' },
   { label: 'Departments', icon: 'department', path: '/admin/departments' },
   { label: 'Subjects', icon: 'book', path: '/admin/subjects' },
   { label: 'Holidays', icon: 'calendar', path: '/admin/holidays' },

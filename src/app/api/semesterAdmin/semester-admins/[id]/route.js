@@ -3,7 +3,7 @@ import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export async function DELETE(request, { params }) {
-  const auth = await requireAuth(request, ['subAdmin']);
+  const auth = await requireAuth(request, ['semesterAdmin']);
   if (auth.error) return auth.error;
   try {
     const { id } = await params;

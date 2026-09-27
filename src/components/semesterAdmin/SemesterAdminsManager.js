@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
@@ -8,6 +8,11 @@ import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 import { formatDepartment, formatShift } from '@/lib/display';
 
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+const SHIFT_OPTIONS = [
+  { value: '1st', label: '🌅 Morning Shift' },
+  { value: '2nd', label: '🌙 Day Shift' },
+];
 
 function SemesterAdminCard({ person, onToggle, onDelete }) {
   const initial = (person.name || '?').trim().charAt(0).toUpperCase();
@@ -101,41 +106,77 @@ function SemesterAdminCard({ person, onToggle, onDelete }) {
   );
 }
 
-export default function SubAdminSemesterAdmins() {
+// `isAdmin` switches this into Super Admin mode:
+//   - reads from /api/admin/semester-admins (institution-wide) instead of
+//     the Department+Shift scoped /api/semesterAdmin/semester-admins
+//   - shows a Department filter plus Department / Shift pickers in the form,
+//     because a Super Admin has no Department or Shift of their own
+//   - one shared component instead of a near-duplicate admin-only page
+export default function SemesterAdminsManager({ isAdmin = false }) {
   const [semesterAdmins, setSemesterAdmins] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [deptFilter, setDeptFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', semester: '' });
+  const [form, setForm] = useState({ name: '', email: '', semester: '', departmentId: '', departmentCode: '', shift: '' });
 
-  const load = () => {
+  const base = isAdmin ? '/admin/semester-admins' : '/semesterAdmin/semester-admins';
+
+  // useCallback so the effect below depends on `load` itself rather than on
+  // a hand-listed subset — `base` and `deptFilter` both change which
+  // endpoint and query string are used, so they must be real dependencies.
+  const load = useCallback(() => {
     setLoading(true);
-    api.get('/subAdmin/semester-admins')
+    const query = isAdmin && deptFilter ? `?departmentId=${encodeURIComponent(deptFilter)}` : '';
+    api.get(`${base}${query}`)
       .then(r => {
         setSemesterAdmins(r.data.semesterAdmins || []);
         setPendingInvites(r.data.pendingInvites || []);
       })
       .finally(() => setLoading(false));
-  };
-  useEffect(load, []);
+  }, [base, isAdmin, deptFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // The Department dropdown is only meaningful for a Super Admin, so the
+  // Semester Admin view never fetches the department list.
+  useEffect(() => {
+    if (!isAdmin) return;
+    api.get('/departments').then(r => setDepartments(r.data.departments || [])).catch(() => {});
+  }, [isAdmin]);
 
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }));
 
-  const openCreate = () => { setForm({ name: '', email: '', semester: '' }); setShowModal(true); };
+  // Picking a Department auto-fills its code, same as the old Department Admin
+  // invite form did.
+  const setDepartment = e => {
+    const value = e.target.value;
+    const dept = departments.find(d => (d.id || d._id) === value);
+    setForm(p => ({ ...p, departmentId: value, departmentCode: dept?.code || '' }));
+  };
+
+  const emptyForm = () => setForm({ name: '', email: '', semester: '', departmentId: '', departmentCode: '', shift: '' });
+  const openCreate = () => { emptyForm(); setShowModal(true); };
 
   const handleSubmit = async () => {
     if (!form.email || !form.semester) return toast.error('Enter Email and Semester');
+    if (isAdmin && (!form.departmentId || !form.shift)) {
+      return toast.error('Select a Department and a Shift');
+    }
     setSaving(true);
     try {
-      // MULTI-SEMESTER ADMIN: if `email` already belongs to a Semester
-      // Admin in your own scope, the backend just adds this Semester to
-      // their existing account instead of sending a new invite — Name
-      // isn't required in that case (only for a genuinely new person).
-      const res = await api.post('/subAdmin/semester-admins', form);
+      // If `email` already belongs to a Semester Admin in the same scope, the
+      // backend just adds this Semester to their existing account instead of
+      // sending a new invite — Name isn't required in that case.
+      const payload = isAdmin
+        ? { name: form.name, email: form.email, semester: form.semester, departmentId: form.departmentId, shift: form.shift }
+        : { name: form.name, email: form.email, semester: form.semester };
+      const res = await api.post(base, payload);
       toast.success(res.data.message);
       setShowModal(false);
       load();
@@ -160,7 +201,7 @@ export default function SubAdminSemesterAdmins() {
     if (!window.confirm(`Cancel invite for ${invite.name}? This email's code will stop working.`)) return;
     setCancellingId(invite._id);
     try {
-      await api.delete(`/subAdmin/semester-admins/${invite._id}`);
+      await api.delete(`${base}/${invite._id}`);
       toast.success('Invite cancelled');
       load();
     } catch (err) {
@@ -186,12 +227,29 @@ export default function SubAdminSemesterAdmins() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 className="page-title">Semester Admin</h2>
-          <p className="page-sub">Create a new Semester Admin, or grant an existing one another Semester in your Department and Shift</p>
+          <p className="page-sub">
+            {isAdmin
+              ? 'Create a Semester Admin in any Department and Shift, or grant an existing one another Semester'
+              : 'Create a new Semester Admin, or grant an existing one another Semester in your Department and Shift'}
+          </p>
         </div>
         <button className="btn-primary" style={{ width: 'auto', padding: '9px 18px' }} onClick={openCreate}>
           <Icon name="plus" size={16} /> New Semester Admin
         </button>
       </div>
+
+      {/* Super Admin sees every department, so it needs a way to narrow down. */}
+      {isAdmin && (
+        <div className="form-group" style={{ maxWidth: 320 }}>
+          <label className="form-label">Department</label>
+          <select className="form-select" value={deptFilter} onChange={e => setDeptFilter(e.target.value)}>
+            <option value="">All Departments</option>
+            {departments.map(d => (
+              <option key={d.id || d._id} value={d.id || d._id}>{d.name} ({d.code})</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div style={{ marginBottom: 16, position: 'relative', maxWidth: 320 }}>
         <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--txt3)' }}>
@@ -220,7 +278,17 @@ export default function SubAdminSemesterAdmins() {
                   <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
                     Sem {inv.semester}
                   </span>
+                  {isAdmin && formatDepartment(inv.departmentId, inv.departmentCode) && (
+                    <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
+                      {formatDepartment(inv.departmentId, inv.departmentCode)}
+                    </span>
+                  )}
                 </div>
+                {isAdmin && inv.shift && (
+                  <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600, alignSelf: 'flex-start' }}>
+                    {formatShift(inv.shift)} Shift
+                  </span>
+                )}
                 <button
                   onClick={() => cancelInvite(inv)}
                   disabled={cancellingId === inv._id}
@@ -272,6 +340,58 @@ export default function SubAdminSemesterAdmins() {
           <label className="form-label">Email *</label>
           <input className="form-input" type="email" placeholder="email@example.com" value={form.email} onChange={set('email')} />
         </div>
+
+        {/* A Super Admin has no Department or Shift of their own, so both are
+            picked here. The Semester Admin view inherits both from their
+            account instead. */}
+        {isAdmin && (
+          <>
+            <div className="form-group">
+              <label className="form-label">Department *</label>
+              <select className="form-select" value={form.departmentId} onChange={setDepartment}>
+                <option value="">— Select Department —</option>
+                {departments.map(d => (
+                  <option key={d.id || d._id} value={d.id || d._id}>{d.name} ({d.code})</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Department Code</label>
+              <input
+                className="form-input"
+                value={form.departmentCode}
+                onChange={set('departmentCode')}
+                placeholder="Auto-filled when Department is selected"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Shift *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {SHIFT_OPTIONS.map(s => {
+                  const selected = form.shift === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, shift: s.value }))}
+                      style={{
+                        padding: '11px 12px', borderRadius: 10, textAlign: 'center',
+                        border: selected ? '2px solid var(--primary)' : '2px solid var(--border2)',
+                        background: selected ? 'var(--primary-light)' : 'var(--bg)',
+                        color: selected ? 'var(--primary)' : 'var(--txt)',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        fontSize: 13, fontWeight: 700,
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="form-group">
           <label className="form-label">Semester *</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>

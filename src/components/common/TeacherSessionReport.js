@@ -9,7 +9,7 @@ function todayISO() {
 }
 
 // Shown at both /admin/session-report (all departments) and
-// /subAdmin/session-report (own Department+Shift only) — the backend
+// (own Department+Shift only) — the backend
 // (/api/reports/teacher-session) already scopes results per role, so this
 // component doesn't need to know which one it's running under.
 //

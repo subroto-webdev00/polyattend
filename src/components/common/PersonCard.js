@@ -4,11 +4,11 @@ import Icon from './Icon';
 import { formatShift } from '@/lib/display';
 
 // ── SHARED COMPACT CARD ─────────────────────────────────────────────────
-// Used everywhere a person (Student, Teacher, Department Admin, Semester Admin)
+// Used everywhere a person (Student, Teacher, Semester Admin)
 // needs to be shown as a small, information-dense card instead of a full
 // table row — grids of these scan much faster than a long list. Each role
 // shows a different, relevant subset of fields (a Student's Roll/Group
-// isn't relevant to a Department Admin, a Department Admin's Department+Shift isn't
+// isn't relevant to a Semester Admin, a Semester Admin's Department+Shift isn't
 // relevant to a Teacher's Subject, etc.) but the visual shape stays the
 // same everywhere so the whole app feels consistent.
 //
@@ -23,7 +23,6 @@ import { formatShift } from '@/lib/display';
 
 const ROLE_META = {
   admin: { label: 'Admin', tag: 'tag-blue', color: '#60a5fa' },
-  subAdmin: { label: 'Department Admin', tag: 'tag-purple', color: '#a78bfa' },
   semesterAdmin: { label: 'Semester Admin', tag: 'tag-blue', color: '#38bdf8' },
   teacher: { label: 'Teacher', tag: 'tag-green', color: '#34d399' },
   student: { label: 'Student', tag: 'tag-amber', color: '#fbbf24' },
@@ -85,12 +84,6 @@ function fieldsForRole(p) {
       return [
         deptCode ? { icon: 'department', text: deptCode } : null,
         p.semester ? { icon: 'book', text: `Sem ${p.semester}` } : null,
-        shiftLabel ? { icon: 'clock', text: `${shiftLabel} Shift` } : null,
-      ].filter(Boolean);
-
-    case 'subAdmin':
-      return [
-        deptCode ? { icon: 'department', text: deptCode } : null,
         shiftLabel ? { icon: 'clock', text: `${shiftLabel} Shift` } : null,
       ].filter(Boolean);
 

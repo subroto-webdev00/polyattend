@@ -9,7 +9,6 @@ datasource db {
 
 enum Role {
   admin
-  subAdmin
   semesterAdmin
   teacher
   student
@@ -53,7 +52,6 @@ enum HolidayType {
 }
 
 enum InviteRole {
-  subAdmin
   semesterAdmin
   teacher
 }
@@ -273,7 +271,7 @@ model AdminInvite {
   section        Section?
   subjectName    String?    @map("subject_name")
   subjectCode    String?    @map("subject_code")
-  invitedById    String     @map("invited_by")
+  invitedById    String?    @map("invited_by")
   code           String
   codeExpire     DateTime   @map("code_expire")
   used           Boolean    @default(false)
@@ -283,7 +281,11 @@ model AdminInvite {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   department Department? @relation(fields: [departmentId], references: [id])
-  invitedBy  User        @relation(fields: [invitedById], references: [id])
+  // Optional: an invite that has already been redeemed (used = true) only
+  // needs the inviter for the audit trail while it is pending. Making this
+  // nullable also lets an invite outlive the account that created it, so
+  // removing a user can't be blocked by their own history.
+  invitedBy  User?       @relation(fields: [invitedById], references: [id])
 
   @@index([email, role])
   @@map("admin_invites")

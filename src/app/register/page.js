@@ -247,7 +247,7 @@ export default function RegisterPage() {
           <Link href="/login" className="rp-login-link" style={{ color: 'var(--primary)', fontWeight: 600 }}>Login</Link>
         </p>
         <p style={{ textAlign: 'center', marginTop: 8, fontSize: 12.5, color: 'var(--txt3)' }}>
-          Department Admin / Semester Admin / Teacher?{' '}
+          Semester Admin / Teacher?{' '}
           <Link href="/admin-register" className="rp-login-link" style={{ color: 'var(--txt2)', fontWeight: 600 }}>Admin Registration</Link>
         </p>
       </div>

@@ -6,8 +6,8 @@ import Icon from './Icon';
 
 // Two search modes:
 //   - "Student" (by Roll) — the original behaviour, unchanged.
-//   - "Staff" (by Name) — Teachers, and for Admin also Department Admin /
-//     Semester Admin / other Admin accounts. Not shown to Teacher role
+//   - "Staff" (by Name) — Teachers, and for Admin also Semester Admin /
+//     other Admin accounts. Not shown to Teacher role
 //     (their layout never links here with canStaffSearch — see the
 //     `canStaffSearch` prop passed from each role's page).
 export default function SearchMobilePage({ canStaffSearch = false }) {
@@ -82,7 +82,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
     await runStaffSearch(name);
   };
 
-  const roleLabel = { teacher: 'Teacher', subAdmin: 'Department Admin', semesterAdmin: 'Semester Admin', admin: 'Admin' };
+  const roleLabel = { teacher: 'Teacher', semesterAdmin: 'Semester Admin', admin: 'Admin' };
 
   return (
     <div className="page">
