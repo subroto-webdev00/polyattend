@@ -5,20 +5,24 @@ import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
-import { useAuth } from '@/context/AuthContext';
+
+// Every Semester a diploma programme runs. A Semester Admin is department-wide
+// and manages all of them, so this is the full list rather than whatever the
+// account happens to hold.
+const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export default function SemesterAdminStudents() {
-  const { user } = useAuth();
-  // MULTI-SEMESTER ADMIN: Student Validation is kept SEPARATE per
-  // Semester — never a merged list. `allowedSemesters` is every Semester
-  // this admin has been granted; `selectedSemester` is which one they're
-  // currently viewing/adding to, chosen via the tabs below.
-  const allowedSemesters = user?.semesters && user.semesters.length ? user.semesters : (user?.semester ? [user.semester] : []);
-  const [selectedSemester, setSelectedSemester] = useState(null);
+  // Student Validation is kept SEPARATE per Semester — never a merged list.
+  // A Semester Admin is department-wide, so all eight Semesters are offered
+  // and the tabs pick which one they're viewing/adding to. This used to be
+  // limited to `user.semesters`, the per-account grant left over from the
+  // removed role split, which is why only four tabs ever appeared.
+  const allowedSemesters = ALL_SEMESTERS;
+  const [selectedSemester, setSelectedSemester] = useState(ALL_SEMESTERS[0]);
   useEffect(() => {
-    if (allowedSemesters.length && selectedSemester == null) setSelectedSemester(allowedSemesters[0]);
+    if (selectedSemester == null) setSelectedSemester(ALL_SEMESTERS[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, []);
 
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);

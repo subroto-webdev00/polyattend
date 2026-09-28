@@ -8,7 +8,12 @@ import ExcelJS from 'exceljs';
 export const dynamic = 'force-dynamic';
 const GROUPS = ['A','B','C','D'];
 function toEntry(u) { return { _id: u.id, id: u.id, name: u.name || '', roll: u.studentId, studentId: u.studentId, email: u.email, mobile: u.mobile, section: u.section, semester: u.semester, used: u.registered !== false, usedByUserId: u.registered !== false ? { name: u.name } : null, createdAt: u.createdAt }; }
-function allowedList(user) { return (user?.semesters || []).map(Number); }
+// A Semester Admin is department-wide, so every Semester a diploma programme
+// runs (1-8) is in scope for them. The old narrow list came from the
+// per-account `semesters` grant, which belonged to the removed role split and
+// left the tabs stuck at whatever the account happened to hold.
+const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+function allowedList() { return ALL_SEMESTERS; }
 function inScope(allowed, semester) { return allowed.includes(Number(semester)); }
 function querySemester(request) { return new URL(request.url).searchParams.get('semester'); }
 function parseSemester(value, fallback) {
@@ -99,7 +104,7 @@ export async function GET(request) {
   if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
-    const allowedSemesters = allowedList(auth.user);
+    const allowedSemesters = allowedList();
     const semesterNum = searchParams.get('semester')!=null ? parseInt(searchParams.get('semester'), 10) : (allowedSemesters.length===1 ? allowedSemesters[0] : null);
     if (semesterNum==null || !Number.isFinite(semesterNum)) return NextResponse.json({ success: false, message: 'Select which Semester to view' }, { status: 400 });
     if (!inScope(allowedSemesters, semesterNum)) return NextResponse.json({ success: false, message: 'That Semester is outside your scope' }, { status: 403 });
@@ -128,7 +133,7 @@ export async function POST(request) {
   if (auth.error) return auth.error;
   try {
     const contentType = request.headers.get('content-type') || '';
-    const allowedSemesters = allowedList(auth.user);
+    const allowedSemesters = allowedList();
     const fromQuery = querySemester(request);
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();

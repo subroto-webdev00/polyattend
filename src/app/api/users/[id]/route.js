@@ -2,14 +2,50 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, hashPassword, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
+// Roles a Semester Admin is allowed to act on. `admin` is deliberately absent:
+// a Semester Admin must never be able to reach a Super Admin account, even
+// just to flip its active flag.
+const SEMESTER_ADMIN_MANAGABLE_ROLES = ['teacher', 'student', 'semesterAdmin'];
+
 export async function PUT(request, { params }) {
   const auth = await requireAuth(request, ['admin', 'semesterAdmin']);
   if (auth.error) return auth.error;
   try {
     const { id } = await params;
     const body = await request.json();
-    const data = { ...body };
+    let data = { ...body };
     if (data.password) data.password = await hashPassword(data.password);
+
+    if (auth.user.role === 'semesterAdmin') {
+      // This used to pass the request body straight into prisma.user.update
+      // with no scope check at all, so a Semester Admin could rewrite anyone's
+      // role, password, department or semesters — i.e. promote themselves to
+      // admin. Restrict them to the one field the UI actually sends, and only
+      // for people inside their own Department.
+      const target = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, role: true, departmentId: true },
+      });
+      if (!target) {
+        return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      }
+      const inScope = target.departmentId === auth.user.departmentId
+        && SEMESTER_ADMIN_MANAGABLE_ROLES.includes(target.role);
+      if (!inScope) {
+        return NextResponse.json({ success: false, message: 'You cannot edit a user outside your scope' }, { status: 403 });
+      }
+
+      const safe = {};
+      if (typeof body.isActive === 'boolean') safe.isActive = body.isActive;
+      if (Object.keys(safe).length === 0) {
+        return NextResponse.json({
+          success: false,
+          message: 'You can only change whether an account is active',
+        }, { status: 403 });
+      }
+      data = safe;
+    }
+
     const user = await prisma.user.update({ where: { id }, data, select: { id: true, name: true, email: true, role: true, isActive: true } });
     return NextResponse.json({ success: true, user });
   } catch (error) { return errorResponse(error, 400); }
@@ -32,16 +68,14 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, message: 'You cannot delete your own account' }, { status: 400 });
     }
 
-    const sameDepartmentAndShift = target.departmentId === auth.user.departmentId
-      && target.shift === auth.user.shift;
-
     if (auth.user.role === 'semesterAdmin') {
-      // Department-wide: a Semester Admin manages Teachers and Students in
-      // their whole Department + Shift. Previously the scope was narrowed to
-      // the Semesters on their own account, which belonged to the old
-      // old role split.
-      const inScope = sameDepartmentAndShift
-        && ['teacher', 'student'].includes(target.role);
+      // Department-wide: a Semester Admin manages Teachers, Students and other
+      // Semester Admins in their whole Department. Shift is NOT part of the
+      // test any more — Teachers are no longer created with a shift, so
+      // requiring a match hid every Teacher who had not been assigned a
+      // Subject yet.
+      const inScope = target.departmentId === auth.user.departmentId
+        && SEMESTER_ADMIN_MANAGABLE_ROLES.includes(target.role);
       if (!inScope) {
         return NextResponse.json({ success: false, message: 'You cannot delete a user outside your scope' }, { status: 403 });
       }
