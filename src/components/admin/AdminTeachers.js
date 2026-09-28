@@ -31,13 +31,13 @@ export default function AdminTeachers() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [assignTarget, setAssignTarget] = useState(null);
 
-  // Create-Teacher form. Note there is no semester / section / subject field
-  // here on purpose — those describe a Subject, not a person, and are
-  // collected in the "Assign Subject" step instead.
+  // Create-Teacher form. Note there is no semester / section / subject /
+  // shift field here on purpose — those describe a Subject, not a person,
+  // and are collected in the "Assign Subject" step instead.
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', departmentId: '', shift: 'first' });
+  const [form, setForm] = useState({ name: '', email: '', departmentId: '' });
 
-  const [assignForm, setAssignForm] = useState({ subjectName: '', subjectCode: '', semester: null, section: '' });
+  const [assignForm, setAssignForm] = useState({ subjectName: '', subjectCode: '', semester: null, section: '', shift: '' });
 
   useEffect(() => {
     api.get('/departments').then(r => setDepartments(r.data.departments || [])).catch(() => {});
@@ -57,7 +57,7 @@ export default function AdminTeachers() {
   const setAssign = f => e => setAssignForm(p => ({ ...p, [f]: e.target.value }));
 
   const openCreate = () => {
-    setForm({ name: '', email: '', departmentId: deptFilter || '', shift: 'first' });
+    setForm({ name: '', email: '', departmentId: deptFilter || '' });
     setShowCreate(true);
   };
 
@@ -65,7 +65,6 @@ export default function AdminTeachers() {
     if (!form.name.trim()) return toast.error('Enter Name for the new Teacher');
     if (!form.email.trim()) return toast.error('Enter Email');
     if (!form.departmentId) return toast.error('Select a Department');
-    if (!form.shift) return toast.error('Select a Shift');
 
     setSaving(true);
     try {
@@ -82,7 +81,9 @@ export default function AdminTeachers() {
 
   const openAssign = (teacher) => {
     setAssignTarget(teacher);
-    setAssignForm({ subjectName: '', subjectCode: '', semester: null, section: '' });
+    // A Teacher only picks a shift here if they don't have one yet —
+    // otherwise their existing shift is reused and not asked again.
+    setAssignForm({ subjectName: '', subjectCode: '', semester: null, section: '', shift: teacher?.shift || '' });
   };
 
   const handleAssign = async () => {
@@ -91,6 +92,7 @@ export default function AdminTeachers() {
     }
     if (!assignForm.semester) return toast.error('Select a Semester');
     if (!assignForm.section) return toast.error('Select a Group');
+    if (!assignTarget?.shift && !assignForm.shift) return toast.error('Select a Shift');
 
     setSaving(true);
     try {
@@ -100,7 +102,7 @@ export default function AdminTeachers() {
         subjectCode: assignForm.subjectCode,
         semester: assignForm.semester,
         section: assignForm.section,
-        shift: assignTarget?.shift || 'first',
+        shift: assignForm.shift || assignTarget?.shift || '',
       });
       toast.success(res.data.message || 'Subject assigned');
       setAssignTarget(null);
@@ -212,7 +214,7 @@ export default function AdminTeachers() {
                   )}
                 </div>
                 <div style={{ fontSize: 10.5, color: 'var(--txt3)' }}>
-                  Subjects are assigned after they register.
+                  Subjects and shift are assigned after they register.
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
                   <button
@@ -303,13 +305,6 @@ export default function AdminTeachers() {
           )}
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Shift *</label>
-          <select className="form-select" value={form.shift} onChange={set('shift')}>
-            {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </div>
-
         <div style={{ fontSize: 12, color: 'var(--txt3)', marginTop: 4, marginBottom: 4 }}>
           Submitting sends a Registration Code to this email (valid for 1 month).
           Subjects are assigned after the Teacher registers.
@@ -335,6 +330,19 @@ export default function AdminTeachers() {
           {formatDepartment(assignTarget?.departmentId, assignTarget?.departmentCode)}
           {assignTarget?.shift ? ` • ${formatShift(assignTarget.shift)} Shift` : ''}
         </div>
+
+        {/* A Teacher invited without a shift needs one before any Subject can
+            be filed, so it is asked here — but only then. Once they have one
+            it is reused and this disappears. */}
+        {!assignTarget?.shift && (
+          <div className="form-group">
+            <label className="form-label">Shift *</label>
+            <select className="form-select" value={assignForm.shift} onChange={setAssign('shift')}>
+              <option value="">— Select Shift —</option>
+              {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">Subject Name *</label>

@@ -19,8 +19,8 @@ const normalizeShift = shift => (shift === '1st' ? 'first' : shift === '2nd' ? '
 //
 // The Department always comes from the Teacher's own account rather than the
 // request body — a Teacher can only teach inside the Department they were
-// invited to, and trusting a client-supplied departmentId would let an Admin
-// request silently re-scope an account.
+// invited to, and trusting a client-supplied departmentId would let a request
+// silently re-scope an account.
 export async function POST(request) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;
@@ -46,12 +46,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Select a valid Semester' }, { status: 400 });
     }
 
-    const requestedShift = shift || 'first';
-    if (!VALID_SHIFTS.includes(requestedShift)) {
-      return NextResponse.json({ success: false, message: 'Select a valid Shift' }, { status: 400 });
-    }
-    const normalizedShift = normalizeShift(requestedShift);
-
     const teacher = await prisma.user.findUnique({
       where: { id: teacherId },
       select: { id: true, name: true, role: true, departmentId: true, shift: true, isActive: true },
@@ -71,6 +65,17 @@ export async function POST(request) {
         message: 'This Teacher has no Department. Re-invite them with a Department first.',
       }, { status: 400 });
     }
+
+    // The invite no longer collects a Shift, so this is the only place a
+    // Teacher gets one. Reuse theirs when they already have it (they may
+    // teach several Subjects in the same shift), otherwise the admin must
+    // pick — silently defaulting to Morning would quietly misfile the
+    // Subject into the wrong shift.
+    const requestedShift = shift || teacher.shift;
+    if (!VALID_SHIFTS.includes(requestedShift)) {
+      return NextResponse.json({ success: false, message: 'Select a Shift' }, { status: 400 });
+    }
+    const normalizedShift = normalizeShift(requestedShift);
 
     // A Subject+Group slot can only ever have one Teacher. A Subject left
     // behind by a deleted Teacher is free to be reassigned.
@@ -112,7 +117,8 @@ export async function POST(request) {
           },
         });
 
-    // Keep the convenience pointer on the account in sync when it is unset.
+    // First Subject for a Teacher who was invited without a shift: adopt
+    // theirs now, so later Subjects reuse it instead of asking again.
     if (!teacher.shift) {
       await prisma.user.update({ where: { id: teacher.id }, data: { shift: normalizedShift } });
     }

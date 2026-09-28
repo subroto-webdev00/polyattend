@@ -73,13 +73,13 @@ export async function GET(request) {
 }
 
 // POST /api/admin/teachers
-// Super Admin invites a new Teacher into a Department + Shift.
+// Super Admin invites a new Teacher into a Department.
 //
-// Deliberately no Subject / Semester / Group here. A Subject always belongs
-// to one Semester and one Group, so accepting them on a "create this person"
-// form would mean storing a placeholder that quietly becomes real data.
-// Subjects are attached afterwards through /assign-subject, where the admin
-// is actually choosing them.
+// Deliberately no Subject / Semester / Group / Shift here. None of those
+// describe a person: a Subject belongs to one Department, Semester, Group
+// and Shift, and every one of them would have to be a placeholder on a
+// "create this person" form that quietly becomes real data. They are all
+// collected through /assign-subject, once the Teacher actually exists.
 export async function POST(request) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;
@@ -102,10 +102,12 @@ export async function POST(request) {
     if (!departmentId) {
       return NextResponse.json({ success: false, message: 'Select a Department' }, { status: 400 });
     }
-    if (!VALID_SHIFTS.includes(shift)) {
-      return NextResponse.json({ success: false, message: 'Select a Shift' }, { status: 400 });
-    }
-    const normalizedShift = normalizeShift(shift);
+
+    // Shift is deliberately optional. It is not a property of the person —
+    // it belongs to the Subject they will teach — so it is picked in the
+    // Assign Subject step instead of here. A Teacher invited without one
+    // simply has no shift until their first Subject is assigned.
+    const normalizedShift = VALID_SHIFTS.includes(shift) ? normalizeShift(shift) : null;
 
     // The Department must actually exist, otherwise the new account would be
     // scoped to a departmentId that matches nothing.
