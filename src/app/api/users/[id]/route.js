@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, hashPassword, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
-// Roles a Semester Admin is allowed to act on. `admin` is deliberately absent:
-// a Semester Admin must never be able to reach a Super Admin account, even
+// Roles a Department Admin is allowed to act on. `admin` is deliberately absent:
+// a Department Admin must never be able to reach a Super Admin account, even
 // just to flip its active flag.
 const SEMESTER_ADMIN_MANAGABLE_ROLES = ['teacher', 'student', 'semesterAdmin'];
 
@@ -18,7 +18,7 @@ export async function PUT(request, { params }) {
 
     if (auth.user.role === 'semesterAdmin') {
       // This used to pass the request body straight into prisma.user.update
-      // with no scope check at all, so a Semester Admin could rewrite anyone's
+      // with no scope check at all, so a Department Admin could rewrite anyone's
       // role, password, department or semesters — i.e. promote themselves to
       // admin. Restrict them to the one field the UI actually sends, and only
       // for people inside their own Department.
@@ -69,8 +69,8 @@ export async function DELETE(request, { params }) {
     }
 
     if (auth.user.role === 'semesterAdmin') {
-      // Department-wide: a Semester Admin manages Teachers, Students and other
-      // Semester Admins in their whole Department. Shift is NOT part of the
+      // Department-wide: a Department Admin manages Teachers, Students and other
+      // Department Admins in their whole Department. Shift is NOT part of the
       // test any more — Teachers are no longer created with a shift, so
       // requiring a match hid every Teacher who had not been assigned a
       // Subject yet.

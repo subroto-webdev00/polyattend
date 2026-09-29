@@ -31,10 +31,10 @@ export default function SemesterAdminDashboard() {
     const allowedSemesters = user.semesters && user.semesters.length ? user.semesters : (user.semester ? [user.semester] : []);
     // PERFORMANCE: previously fetched the full teacher and student lists
     // just to read `.count` off the response — downloading every one of
-    // this Semester Admin's students on every dashboard load. `countOnly`
+    // this Department Admin's students on every dashboard load. `countOnly`
     // returns just the number, no documents.
     //
-    // MULTI-SEMESTER ADMIN: Pending Validation is fetched once PER granted
+    // DEPARTMENT-WIDE ADMIN: Pending Validation is fetched once PER granted
     // Semester (the endpoint itself keeps each Semester's queue strictly
     // separate — see /api/semesterAdmin/students) and summed here just for
     // this one dashboard total.
@@ -52,7 +52,7 @@ export default function SemesterAdminDashboard() {
       });
       setSubjects(subs.data.subjects || []);
     }).catch((error) => {
-      console.error('Could not load Semester Admin dashboard', error);
+      console.error('Could not load Department Admin dashboard', error);
     }).finally(() => setLoading(false));
   }, [user]);
 
@@ -71,7 +71,7 @@ export default function SemesterAdminDashboard() {
       <DashboardHero
 
         name={user?.name}
-        subtitle="Semester Admin"
+        subtitle="Department Admin"
         subtitleColor="text-indigo-300"
         badges={badges}
         rightSlot={<DashboardClock now={now} />}

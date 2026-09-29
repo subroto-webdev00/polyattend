@@ -6,7 +6,7 @@ import { formatDepartment, formatShift } from '@/lib/display';
 
 // View-only: a Teacher can be assigned multiple Subjects (across
 // different Semesters/Groups, even different Shifts) by one or more
-// Semester Admins. This page just lists everything they've been
+// Department Admins. This page just lists everything they've been
 // assigned — creating/editing a Subject is an Admin action, not
 // something a Teacher does here (see admin/teachers/assign-subject).
 export default function TeacherSubjects() {

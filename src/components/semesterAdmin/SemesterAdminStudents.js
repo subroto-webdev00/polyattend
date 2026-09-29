@@ -6,14 +6,14 @@ import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 
-// Every Semester a diploma programme runs. A Semester Admin is department-wide
+// Every Semester a diploma programme runs. A Department Admin is department-wide
 // and manages all of them, so this is the full list rather than whatever the
 // account happens to hold.
 const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export default function SemesterAdminStudents() {
   // Student Validation is kept SEPARATE per Semester — never a merged list.
-  // A Semester Admin is department-wide, so all eight Semesters are offered
+  // A Department Admin is department-wide, so all eight Semesters are offered
   // and the tabs pick which one they're viewing/adding to. This used to be
   // limited to `user.semesters`, the per-account grant left over from the
   // removed role split, which is why only four tabs ever appeared.
@@ -163,7 +163,7 @@ export default function SemesterAdminStudents() {
         📄 The Excel/CSV file must have <strong>Name</strong>, <strong>Roll</strong>, <strong>Email</strong> and <strong>Group</strong> — these four columns (as headers in the first row, Group as A/B/C/D). Each Student's email will get a separate 12-digit code.
       </div>
 
-      {/* MULTI-SEMESTER ADMIN: Student Validation stays strictly separate
+      {/* DEPARTMENT-WIDE ADMIN: Student Validation stays strictly separate
           per Semester — this tab bar only appears once this admin has
           more than one granted Semester; switching tabs reloads the list
           scoped to that Semester only. */}

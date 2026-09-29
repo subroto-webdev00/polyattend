@@ -47,7 +47,7 @@ export async function POST(request) {
     const departmentId = auth.user.departmentId;
     const shift = auth.user.shift;
 
-    // A Semester Admin can manage several Semesters with one login. The
+    // A Department Admin can manage several Semesters with one login. The
     // legacy `semester` field is still populated for older rows, so check
     // both representations when enforcing one-admin-per-semester.
     const existingSemAdmin = await prisma.user.findFirst({
@@ -80,7 +80,7 @@ export async function POST(request) {
     });
 
     if (existingUser) {
-      // Reuse only an existing Semester Admin in the exact same scope. Never
+      // Reuse only an existing Department Admin in the exact same scope. Never
       // silently merge the email into a different role, department, or shift.
       const isOwnScopeSemesterAdmin = existingUser.role === 'semesterAdmin'
         && existingUser.departmentId === departmentId
@@ -92,7 +92,7 @@ export async function POST(request) {
       if (!existingUser.isActive) {
         return NextResponse.json({
           success: false,
-          message: 'This Semester Admin is inactive. Activate the account before adding another Semester.',
+          message: 'This Department Admin is inactive. Activate the account before adding another Semester.',
         }, { status: 400 });
       }
 
@@ -109,14 +109,14 @@ export async function POST(request) {
       if (assignedSemesters.has(semInt)) {
         return NextResponse.json({
           success: false,
-          message: `${existingUser.name || 'This Semester Admin'} already manages Semester ${semInt}`,
+          message: `${existingUser.name || 'This Department Admin'} already manages Semester ${semInt}`,
         }, { status: 400 });
       }
 
       if (existingSemAdmin) {
         const message = existingSemAdmin.id === existingUser.id
-          ? `${existingUser.name || 'This Semester Admin'} already manages Semester ${semInt}`
-          : `A Semester Admin (${existingSemAdmin.name || 'Unnamed Semester Admin'}) already exists for Semester ${semInt}`;
+          ? `${existingUser.name || 'This Department Admin'} already manages Semester ${semInt}`
+          : `A Department Admin (${existingSemAdmin.name || 'Unnamed Department Admin'}) already exists for Semester ${semInt}`;
         return NextResponse.json({ success: false, message }, { status: 400 });
       }
 
@@ -161,21 +161,21 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         addedToExisting: true,
-        message: `Semester ${semInt} added to ${updatedUser.name || 'the existing Semester Admin'}'s account`,
+        message: `Semester ${semInt} added to ${updatedUser.name || 'the existing Department Admin'}'s account`,
         semesterAdmin: { ...updatedUser, _id: updatedUser.id },
       }, { status: 200 });
     }
 
     // A name is required only when this is a genuinely new account. Existing
-    // Semester Admin emails are handled above and do not need another invite.
+    // Department Admin emails are handled above and do not need another invite.
     if (!normalizedName) {
-      return NextResponse.json({ success: false, message: 'Enter Name for the new Semester Admin' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Enter Name for the new Department Admin' }, { status: 400 });
     }
 
     if (existingSemAdmin) {
       return NextResponse.json({
         success: false,
-        message: `A Semester Admin (${existingSemAdmin.name || 'Unnamed Semester Admin'}) already exists for Semester ${semInt}`,
+        message: `A Department Admin (${existingSemAdmin.name || 'Unnamed Department Admin'}) already exists for Semester ${semInt}`,
       }, { status: 400 });
     }
 

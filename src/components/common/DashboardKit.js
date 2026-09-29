@@ -5,7 +5,7 @@ import Icon from './Icon';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 // Shared building blocks for every role's Dashboard (home) page — Super
-// Admin and Semester Admin - so they both visually match Teacher
+// Admin and Department Admin - so they both visually match Teacher
 // Dashboard exactly (same dark palette, same hero/blob treatment, same
 // StatCard, same motion timing) without each page re-implementing it.
 export const ACCENTS = {

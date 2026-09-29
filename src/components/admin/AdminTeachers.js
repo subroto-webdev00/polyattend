@@ -267,7 +267,7 @@ export default function AdminTeachers() {
               key={getRecordId(t)}
               person={t}
               actions={[
-                { label: 'Assign Subject', icon: 'book', onClick: () => openAssign(t) },
+                { label: 'Assign Subject', icon: 'book', variant: 'primary', onClick: () => openAssign(t) },
                 { label: t.isActive ? 'Deactivate' : 'Activate', variant: t.isActive ? 'danger' : undefined, onClick: () => toggleActive(t) },
                 { label: 'Delete', variant: 'danger', onClick: () => setDeleteTarget(t) },
               ]}

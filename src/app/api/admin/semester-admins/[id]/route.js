@@ -5,9 +5,9 @@ import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 // DELETE /api/admin/semester-admins/[id]
-// A Super Admin can cancel a pending invite or deactivate a Semester Admin
+// A Super Admin can cancel a pending invite or deactivate a Department Admin
 // anywhere in the institution, so there is deliberately no Department + Shift
-// scope check here (unlike the Semester Admin's own route).
+// scope check here (unlike the Department Admin's own route).
 export async function DELETE(request, { params }) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;
@@ -18,7 +18,7 @@ export async function DELETE(request, { params }) {
     const invite = await prisma.adminInvite.findUnique({ where: { id } });
     if (invite) {
       if (invite.role !== 'semesterAdmin') {
-        return NextResponse.json({ success: false, message: 'Not a Semester Admin invite' }, { status: 400 });
+        return NextResponse.json({ success: false, message: 'Not a Department Admin invite' }, { status: 400 });
       }
       await prisma.adminInvite.delete({ where: { id } });
       return NextResponse.json({ success: true, message: 'Invite cancelled' });
@@ -29,14 +29,14 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, message: 'Not found' }, { status: 404 });
     }
     if (user.role !== 'semesterAdmin') {
-      return NextResponse.json({ success: false, message: 'Not a Semester Admin' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Not a Department Admin' }, { status: 400 });
     }
 
-    // No "last admin" guard is needed here: a Semester Admin can never
-    // create another Semester Admin outside their own department, and the
+    // No "last admin" guard is needed here: a Department Admin can never
+    // create another Department Admin outside their own department, and the
     // Super Admin is above this role entirely — deactivating every Semester
     // Admin would still leave the Super Admin able to invite new ones.
     await prisma.user.update({ where: { id }, data: { isActive: false } });
-    return NextResponse.json({ success: true, message: 'Semester Admin deactivated' });
+    return NextResponse.json({ success: true, message: 'Department Admin deactivated' });
   } catch (error) { return errorResponse(error); }
 }

@@ -82,10 +82,10 @@ export async function GET(request) {
     if (searchParams.get('section')) where.section = searchParams.get('section');
     if (searchParams.get('status')) where.status = searchParams.get('status');
     // Role scope is applied LAST so it cannot be widened by a query param.
-    // A Semester Admin is department-wide (own Department + Shift, all
+    // A Department Admin is department-wide (own Department + Shift, all
     // Semesters) — the old `semester: { in: ... }` narrowing is gone with
     // the old role split. Without this ordering, `?departmentId=`
-    // would let a Semester Admin read another department's sessions.
+    // would let a Department Admin read another department's sessions.
     if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
     const sessions = await prisma.session.findMany({ where, include: sessionInclude, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], take: 100 });
     return NextResponse.json({ success: true, count: sessions.length, sessions: sessions.map(normalizeSession) });

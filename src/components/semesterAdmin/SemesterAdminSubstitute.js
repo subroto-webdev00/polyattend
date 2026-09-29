@@ -7,7 +7,7 @@ import useSessionExitGuard from '@/hooks/useSessionExitGuard';
 
 // SUBSTITUTE CLASS FEATURE
 // If a Teacher misses their class for some reason (sickness, emergency,
-// etc.), the Semester Admin for that Teacher's own Department+Shift+
+// etc.), the Department Admin for that Teacher's own Department+Shift+
 // Semester can come here, start that subject's session themselves, and
 // take manual attendance for whichever students actually showed up.
 //
@@ -79,7 +79,7 @@ export default function SemesterAdminSubstitute() {
   const touchedRef = useRef(new Set());
 
   // MISSED SESSIONS PANEL — every unresolved missed class across this
-  // Semester Admin's own Semester, not just today or the last day or two.
+  // Department Admin's own Semester, not just today or the last day or two.
   // Gives a call list (Teacher name + mobile) so the admin can confirm the
   // class was actually missed and find out who attended, before starting
   // a Substitute session for that exact date.
@@ -109,7 +109,7 @@ export default function SemesterAdminSubstitute() {
   useSessionExitGuard(step === 'mark', selectedSubject ? `Substitute Attendance — ${selectedSubject.name}` : 'Substitute Attendance');
 
   useEffect(() => {
-    // /api/subjects already scopes to this Semester Admin's own
+    // /api/subjects already scopes to this Department Admin's own
     // Department+Shift+Semester — no extra filtering needed here.
     api.get('/subjects').then(r => setSubjects(r.data.subjects || [])).finally(() => setLoading(false));
     // Resume an in-progress substitute session STARTED BY THIS ADMIN only

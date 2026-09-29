@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 // relative to that ancestor's scroll state once it's nested this deep in
 // a scrolling context — so whenever the page underneath was scrolled, the
 // modal's top (title, first fields) rendered off-screen with a large dead
-// gap below, exactly as seen on the Semester Admin invite and Student
+// gap below, exactly as seen on the Department Admin invite and Student
 // Validation forms. Rendering the modal through a portal straight onto
 // `document.body` takes it out of that nested scroll context entirely, so
 // `position: fixed` always measures against the real viewport — matching

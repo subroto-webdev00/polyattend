@@ -5,15 +5,15 @@ import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import useSessionExitGuard from '@/hooks/useSessionExitGuard';
 
-// COVERED MISS CLASS FEATURE (moved here from Semester Admin's old
-// "Substitute Class" page — that page has been retired; Semester Admin
+// COVERED MISS CLASS FEATURE (moved here from Department Admin's old
+// "Substitute Class" page — that page has been retired; Department Admin
 // now only sees the read-only Missed Classes Report).
 //
 // A Teacher comes here to catch up on their OWN missed classes: pick one
 // from the Missed Classes list below, start that subject's session for the
 // exact date it was missed, and take manual attendance for it — same
 // backdated-session flow as before, just self-service instead of a
-// Semester Admin doing it on the Teacher's behalf. The saved Session is
+// Department Admin doing it on the Teacher's behalf. The saved Session is
 // stamped with the actual missed date (not today), via the `date` field
 // on POST /sessions.
 //
@@ -178,7 +178,7 @@ export default function TeacherCoveredMissClass() {
 
   const startSession = async (subject, dateStr = null) => {
     if (!subject?.departmentId) {
-      toast.error('This subject has no Department set. Contact your Semester Admin.');
+      toast.error('This subject has no Department set. Contact your Department Admin.');
       return;
     }
     setSelectedSubject(subject);

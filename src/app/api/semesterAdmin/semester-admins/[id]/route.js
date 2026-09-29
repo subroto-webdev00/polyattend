@@ -19,6 +19,6 @@ export async function DELETE(request, { params }) {
     if (user.departmentId !== auth.user.departmentId || user.shift !== auth.user.shift)
       return NextResponse.json({ success: false, message: 'Outside your scope' }, { status: 403 });
     await prisma.user.update({ where: { id }, data: { isActive: false } });
-    return NextResponse.json({ success: true, message: 'Semester Admin deactivated' });
+    return NextResponse.json({ success: true, message: 'Department Admin deactivated' });
   } catch (error) { return errorResponse(error); }
 }

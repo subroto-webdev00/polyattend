@@ -48,7 +48,7 @@ export default function RegisterPage() {
     if (!form.studentId) return toast.error('Enter your Student Roll');
     if (!form.mobile.trim()) return toast.error('Mobile Number is required');
     if (!/^01[0-9]{9}$/.test(form.mobile.trim())) return toast.error('Enter a valid 11-digit mobile number (e.g. 01XXXXXXXXX)');
-    if (!form.preApprovalCode) return toast.error('Enter the Registration Code sent by your Semester Admin');
+    if (!form.preApprovalCode) return toast.error('Enter the Registration Code sent by your Department Admin');
     setLoading(true);
     try {
       await api.post('/auth/register-public', { ...form, role });
@@ -134,7 +134,7 @@ export default function RegisterPage() {
 
         {/* MISTAKE FIX: Teacher self-registration (role selector + secret key)
             removed. Teacher accounts are now created only via a
-            Semester Admin invite. This page now handles Student
+            Department Admin invite. This page now handles Student
             self-registration only. */}
         <p className="auth-sub" style={{ marginBottom: 20 }}>🎓 Student Registration</p>
 
@@ -228,11 +228,11 @@ export default function RegisterPage() {
                   style={{ letterSpacing: 2, fontFamily: 'monospace' }}
                 />
                 <span style={{ fontSize: 11, color: 'var(--txt3)', marginTop: 4, display: 'block' }}>
-                  Your Semester Admin sent this code to this Roll + Email. Check your Spam folder.
+                  Your Department Admin sent this code to this Roll + Email. Check your Spam folder.
                 </span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--txt3)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginBottom: 4 }}>
-                🎓 Your Name, Department, Semester, Group and Shift were already set by your Semester Admin — no need to enter them again.
+                🎓 Your Name, Department, Semester, Group and Shift were already set by your Department Admin — no need to enter them again.
               </div>
             </div>
           )}
@@ -247,7 +247,7 @@ export default function RegisterPage() {
           <Link href="/login" className="rp-login-link" style={{ color: 'var(--primary)', fontWeight: 600 }}>Login</Link>
         </p>
         <p style={{ textAlign: 'center', marginTop: 8, fontSize: 12.5, color: 'var(--txt3)' }}>
-          Semester Admin / Teacher?{' '}
+          Department Admin / Teacher?{' '}
           <Link href="/admin-register" className="rp-login-link" style={{ color: 'var(--txt2)', fontWeight: 600 }}>Admin Registration</Link>
         </p>
       </div>

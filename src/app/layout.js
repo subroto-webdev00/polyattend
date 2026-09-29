@@ -15,8 +15,8 @@ export const metadata = {
     template: '%s | PolyAttend',
   },
   description: 'PolyAttend is a Smart Attendance Management System built exclusively for Thakurgaon Polytechnic Institute (TPI), Bangladesh. ' +
-    'Admin has full control over the entire system — managing departments, shifts, semester admins, system settings, holidays, and generating institution-wide attendance reports. ' +
-    'Semester Admin manages an entire department and shift — creating other semester admins, adding and approving students, assigning teachers to subjects across every semester, promoting students to the next semester, and monitoring department-wide attendance. ' +
+    'Admin has full control over the entire system — managing departments, shifts, department admins, system settings, holidays, and generating institution-wide attendance reports. ' +
+    'Department Admin manages an entire department and shift — creating other department admins, adding and approving students, assigning teachers to subjects across every semester, promoting students to the next semester, and monitoring department-wide attendance. ' +
     'Teachers can start live attendance sessions for their class — students are notified instantly and can mark themselves present by scanning a QR code or through a self-mark button. Teachers can also mark students present manually by searching by name or student ID, view session history, generate subject-wise attendance reports, and export data as PDF or Excel. ' +
     'Students can view their real-time attendance percentage for each subject, see their full attendance history, check which sessions they were present or absent, and receive instant notifications when a teacher starts a session for their class. ' +
     'Core features include QR-based session attendance, real-time self-mark, manual attendance by teacher, role-based dashboards for four user types, department and subject management, semester promotion system, holiday management, email OTP verification for secure registration and login, two-factor authentication for admin roles, rate-limited login protection, automated PDF and Excel report generation, and a fully responsive mobile-friendly interface. ' +
@@ -97,8 +97,8 @@ export const metadata = {
     // Role based
     'admin attendance system',
     'department wide attendance',
-    'semester admin department',
-    'semester admin',
+    'department admin department',
+    'department admin',
     'role based attendance system',
     'multi role attendance system',
     'teacher session management',
@@ -167,7 +167,7 @@ export const metadata = {
   metadataBase: new URL('https://polyattend-system2026.vercel.app'),
   openGraph: {
     title: 'PolyAttend — Thakurgaon Polytechnic Institute',
-    description: 'PolyAttend is a Smart Attendance Management System for Thakurgaon Polytechnic Institute (TPI), Bangladesh. Four role-based dashboards for Admin, Semester Admin, Teachers, and Students. Features include live QR session attendance, real-time self-mark, manual attendance, semester promotion, holiday management, PDF and Excel reports, email OTP verification, and two-factor login — built for every department, shift, and semester of TPI.',
+    description: 'PolyAttend is a Smart Attendance Management System for Thakurgaon Polytechnic Institute (TPI), Bangladesh. Four role-based dashboards for Admin, Department Admin, Teachers, and Students. Features include live QR session attendance, real-time self-mark, manual attendance, semester promotion, holiday management, PDF and Excel reports, email OTP verification, and two-factor login — built for every department, shift, and semester of TPI.',
     url: 'https://polyattend-system2026.vercel.app',
     siteName: 'PolyAttend',
     locale: 'en_US',

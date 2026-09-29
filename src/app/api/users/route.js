@@ -18,7 +18,7 @@ export async function GET(request) {
 
     // `allAdmins` is a UI-level group, not a database Role enum value. Keep
     // `role=admin` exact for existing consumers while allowing the Users page
-    // to show Super Admin + Semester Admin together.
+    // to show Super Admin + Department Admin together.
     if (requestedRole === 'allAdmins') {
       where.role = { in: ADMIN_ROLES };
     } else if (requestedRole) {
@@ -43,7 +43,7 @@ export async function GET(request) {
     }
 
     if (auth.user.role === 'semesterAdmin') {
-      // Department-wide: a Semester Admin now sees their entire department
+      // Department-wide: a Department Admin now sees their entire department
       // + shift, not just the semesters on their own account. The old
       // `where.semester = { in: auth.user.semesters }` restriction came from
       // the old role split and no longer applies.

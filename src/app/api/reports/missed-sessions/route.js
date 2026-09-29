@@ -35,7 +35,7 @@ export async function GET(request) {
     } else if (auth.user.role === 'teacher') {
       where.subject = { teacherId: auth.user.id };
     } else if (auth.user.role === 'semesterAdmin') {
-      // Department-wide: every subject in the Semester Admin's Department.
+      // Department-wide: every subject in the Department Admin's Department.
       where.subject = {
         departmentId: auth.user.departmentId,
         ...(auth.user.shift ? { shift: auth.user.shift } : {}),

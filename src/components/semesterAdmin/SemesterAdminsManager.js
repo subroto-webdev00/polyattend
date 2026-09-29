@@ -34,7 +34,7 @@ function SemesterAdminCard({ person, onToggle, onDelete }) {
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
-        <span className="sa-chip sa-chip-primary">Semester Admin</span>
+        <span className="sa-chip sa-chip-primary">Department Admin</span>
         {formatDepartment(person.departmentId, person.departmentCode) && <span className="sa-chip">{formatDepartment(person.departmentId, person.departmentCode)}</span>}
         {(person.semesters && person.semesters.length ? person.semesters : (person.semester ? [person.semester] : [])).map(sem => (
           <span key={sem} className="sa-chip">Sem {sem}</span>
@@ -144,7 +144,7 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
   useEffect(() => { load(); }, [load]);
 
   // The Department dropdown is only meaningful for a Super Admin, so the
-  // Semester Admin view never fetches the department list.
+  // Department Admin view never fetches the department list.
   useEffect(() => {
     if (!isAdmin) return;
     api.get('/departments').then(r => setDepartments(r.data.departments || [])).catch(() => {});
@@ -170,7 +170,7 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
     }
     setSaving(true);
     try {
-      // If `email` already belongs to a Semester Admin in the same scope, the
+      // If `email` already belongs to a Department Admin in the same scope, the
       // backend just adds this Semester to their existing account instead of
       // sending a new invite — Name isn't required in that case.
       const payload = isAdmin
@@ -196,7 +196,7 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
   };
 
   // Pending invite hasn't become a real account yet — a lightweight confirm
-  // is enough (no typed-name step, unlike deleting an active Semester Admin).
+  // is enough (no typed-name step, unlike deleting an active Department Admin).
   const cancelInvite = async (invite) => {
     if (!window.confirm(`Cancel invite for ${invite.name}? This email's code will stop working.`)) return;
     setCancellingId(invite._id);
@@ -226,15 +226,15 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
     <div className="page">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 className="page-title">Semester Admin</h2>
+          <h2 className="page-title">Department Admin</h2>
           <p className="page-sub">
             {isAdmin
-              ? 'Create a Semester Admin in any Department and Shift, or grant an existing one another Semester'
-              : 'Create a new Semester Admin, or grant an existing one another Semester in your Department and Shift'}
+              ? 'Create a Department Admin in any Department and Shift, or grant an existing one another Semester'
+              : 'Create a new Department Admin, or grant an existing one another Semester in your Department and Shift'}
           </p>
         </div>
         <button className="btn-primary" style={{ width: 'auto', padding: '9px 18px' }} onClick={openCreate}>
-          <Icon name="plus" size={16} /> New Semester Admin
+          <Icon name="plus" size={16} /> New Department Admin
         </button>
       </div>
 
@@ -310,12 +310,12 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
         </div>
       )}
 
-      <div className="section-title" style={{ marginBottom: 8 }}>Active Semester Admins ({filtered.length})</div>
+      <div className="section-title" style={{ marginBottom: 8 }}>Active Department Admins ({filtered.length})</div>
       {filtered.length === 0 ? (
         <div className="card">
           <div className="empty">
             <div className="empty-icon"><Icon name="users" size={24} /></div>
-            <p>No Semester Admins yet</p>
+            <p>No Department Admins yet</p>
           </div>
         </div>
       ) : (
@@ -327,13 +327,13 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)}>
-        <div className="modal-title">Invite New Semester Admin</div>
+        <div className="modal-title">Invite New Department Admin</div>
 
         <div className="form-group">
-          <label className="form-label">Semester Admin Name</label>
+          <label className="form-label">Department Admin Name</label>
           <input className="form-input" placeholder="Full Name" value={form.name} onChange={set('name')} />
           <div style={{ fontSize: 11.5, color: 'var(--txt3)', marginTop: 4 }}>
-            Only needed for a brand-new person. If this Email already belongs to an existing Semester Admin, the selected Semester is just added to their account — Name is ignored.
+            Only needed for a brand-new person. If this Email already belongs to an existing Department Admin, the selected Semester is just added to their account — Name is ignored.
           </div>
         </div>
         <div className="form-group">
@@ -342,7 +342,7 @@ export default function SemesterAdminsManager({ isAdmin = false }) {
         </div>
 
         {/* A Super Admin has no Department or Shift of their own, so both are
-            picked here. The Semester Admin view inherits both from their
+            picked here. The Department Admin view inherits both from their
             account instead. */}
         {isAdmin && (
           <>

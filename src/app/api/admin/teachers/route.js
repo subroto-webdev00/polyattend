@@ -20,7 +20,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 //
 // This is a separate route rather than a widening of
 // /api/semesterAdmin/teachers. Creating Teachers is an Admin-only action
-// now, and keeping the two apart means the Semester Admin endpoint can
+// now, and keeping the two apart means the Department Admin endpoint can
 // never quietly become institution-wide.
 export async function GET(request) {
   const auth = await requireAuth(request, ['admin']);

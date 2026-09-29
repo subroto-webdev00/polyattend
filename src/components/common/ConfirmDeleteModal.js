@@ -4,7 +4,7 @@ import Modal from './Modal';
 import toast from 'react-hot-toast';
 
 // Shared "type the name to confirm" delete flow — used everywhere a
-// PersonCard shows a Delete action (Semester Admin, Teacher,
+// PersonCard shows a Delete action (Department Admin, Teacher,
 // Student lists). Deletion is permanent, so this is the one safeguard
 // standing between a misclick and losing the record for good.
 //

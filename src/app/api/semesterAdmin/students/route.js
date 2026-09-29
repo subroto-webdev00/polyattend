@@ -8,7 +8,7 @@ import ExcelJS from 'exceljs';
 export const dynamic = 'force-dynamic';
 const GROUPS = ['A','B','C','D'];
 function toEntry(u) { return { _id: u.id, id: u.id, name: u.name || '', roll: u.studentId, studentId: u.studentId, email: u.email, mobile: u.mobile, section: u.section, semester: u.semester, used: u.registered !== false, usedByUserId: u.registered !== false ? { name: u.name } : null, createdAt: u.createdAt }; }
-// A Semester Admin is department-wide, so every Semester a diploma programme
+// A Department Admin is department-wide, so every Semester a diploma programme
 // runs (1-8) is in scope for them. The old narrow list came from the
 // per-account `semesters` grant, which belonged to the removed role split and
 // left the tabs stuck at whatever the account happened to hold.
@@ -92,7 +92,7 @@ async function addOneEntry({ name, roll, email, section, scope, invitedBy }) {
   if (byEmail) { if (byEmail.role!=='student') return { ok: false, reason: 'This Email belongs to a different type of account' }; return { ok: false, reason: byEmail.registered===false ? `This Email is already pre-approved for Roll ${byEmail.studentId}` : `This Email is already registered as Roll ${byEmail.studentId}` }; }
   const code = generateInviteCode();
   const student = await prisma.user.create({ data: { name: nn, email: ne, studentId: nr, section: ns, role: 'student', registered: false, isActive: true, isVerified: false, ...scope, createdById: invitedBy, regCode: code, regCodeExpire: oneMonthFromNow() } });
-  // Use the same standard invitation email as Department/Semester Admin
+  // Use the same standard invitation email as Department/Department Admin
   // invites. This keeps the Student wording, layout, expiry instruction, and
   // security guidance consistent across single and Excel-based invites.
   const { subject, message, html } = inviteCodeEmail({ name: nn, role: 'student', code });

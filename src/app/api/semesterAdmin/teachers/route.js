@@ -5,7 +5,7 @@ import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 // GET /api/semesterAdmin/teachers
-// Teacher Management list for a Semester Admin.
+// Teacher Management list for a Department Admin.
 //
 // There is deliberately NO POST here. Creating a Teacher is a Super Admin
 // action, so this route is read-only apart from /assign-subject.

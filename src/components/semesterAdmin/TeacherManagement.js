@@ -18,7 +18,7 @@ const SHIFTS = [
 // The API exposes `id`, some older shapes expose `_id` — accept both.
 const getRecordId = record => record?.id || record?._id;
 
-// Teacher Management for a Semester Admin.
+// Teacher Management for a Department Admin.
 //
 // The list is department-wide and needs no filter: the API scopes it to the
 // caller's own Department. There is no "Create Teacher" here on purpose —
@@ -157,7 +157,7 @@ export default function TeacherManagement() {
                   key={getRecordId(t)}
                   person={t}
                   actions={[
-                    { label: 'Assign Subject', icon: 'book', onClick: () => openAssign(t) },
+                    { label: 'Assign Subject', icon: 'book', variant: 'primary', onClick: () => openAssign(t) },
                     { label: t.isActive ? 'Deactivate' : 'Activate', variant: t.isActive ? 'danger' : undefined, onClick: () => toggleActive(t) },
                     { label: 'Delete', variant: 'danger', onClick: () => setDeleteTarget(t) },
                   ]}

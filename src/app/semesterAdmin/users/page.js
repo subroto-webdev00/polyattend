@@ -1,6 +1,6 @@
 import AdminUsers from '@/components/admin/AdminUsers';
 
-// Semester Admin sees Teachers and Students only, scoped to their own
+// Department Admin sees Teachers and Students only, scoped to their own
 // Department+Shift+Semester by /api/users server-side.
 export default function Page() {
   return (

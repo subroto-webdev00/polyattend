@@ -10,14 +10,14 @@ export const dynamic = 'force-dynamic';
 const VALID_SHIFTS = ['1st', '2nd', 'first', 'second'];
 
 // GET /api/admin/semester-admins
-// Super Admin view: EVERY Semester Admin in the institution, plus their
+// Super Admin view: EVERY Department Admin in the institution, plus their
 // pending invites. `?departmentId=` narrows the list to one department.
 //
 // This deliberately lives in its own route rather than widening
 // /api/semesterAdmin/semester-admins: that endpoint is scoped to the
 // caller's own Department + Shift, and an admin has neither, so letting it
 // in would mean re-deriving the scope on every branch. Keeping the two
-// apart means the Semester Admin route can never accidentally become
+// apart means the Department Admin route can never accidentally become
 // institution-wide.
 export async function GET(request) {
   const auth = await requireAuth(request, ['admin']);
@@ -67,7 +67,7 @@ export async function GET(request) {
 }
 
 // POST /api/admin/semester-admins
-// Super Admin invites a Semester Admin into a specific Department + Shift.
+// Super Admin invites a Department Admin into a specific Department + Shift.
 // Department and Shift are required here because a Super Admin has neither
 // of their own to inherit.
 export async function POST(request) {
@@ -123,7 +123,7 @@ export async function POST(request) {
       },
     });
 
-    // Same rule as the Semester Admin route: an existing Semester Admin in
+    // Same rule as the Department Admin route: an existing Department Admin in
     // the SAME department + shift simply gains the extra Semester. Never
     // merge the email into a different role or a different scope.
     if (existingUser) {
@@ -137,7 +137,7 @@ export async function POST(request) {
       if (!existingUser.isActive) {
         return NextResponse.json({
           success: false,
-          message: 'This Semester Admin is inactive. Activate the account before adding another Semester.',
+          message: 'This Department Admin is inactive. Activate the account before adding another Semester.',
         }, { status: 400 });
       }
 
@@ -152,13 +152,13 @@ export async function POST(request) {
       if (assignedSemesters.has(semInt)) {
         return NextResponse.json({
           success: false,
-          message: `${existingUser.name || 'This Semester Admin'} already manages Semester ${semInt}`,
+          message: `${existingUser.name || 'This Department Admin'} already manages Semester ${semInt}`,
         }, { status: 400 });
       }
       if (existingSemAdmin && existingSemAdmin.id !== existingUser.id) {
         return NextResponse.json({
           success: false,
-          message: `A Semester Admin (${existingSemAdmin.name || 'Unnamed'}) already exists for Semester ${semInt}`,
+          message: `A Department Admin (${existingSemAdmin.name || 'Unnamed'}) already exists for Semester ${semInt}`,
         }, { status: 400 });
       }
 
@@ -175,19 +175,19 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         addedToExisting: true,
-        message: `Semester ${semInt} added to ${updatedUser.name || 'the existing Semester Admin'}'s account`,
+        message: `Semester ${semInt} added to ${updatedUser.name || 'the existing Department Admin'}'s account`,
         semesterAdmin: { ...updatedUser, _id: updatedUser.id },
       });
     }
 
     if (!normalizedName) {
-      return NextResponse.json({ success: false, message: 'Enter Name for the new Semester Admin' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Enter Name for the new Department Admin' }, { status: 400 });
     }
 
     if (existingSemAdmin) {
       return NextResponse.json({
         success: false,
-        message: `A Semester Admin (${existingSemAdmin.name || 'Unnamed Semester Admin'}) already exists for Semester ${semInt}`,
+        message: `A Department Admin (${existingSemAdmin.name || 'Unnamed Department Admin'}) already exists for Semester ${semInt}`,
       }, { status: 400 });
     }
 

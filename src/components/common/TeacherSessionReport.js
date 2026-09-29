@@ -13,7 +13,7 @@ function todayISO() {
 // (/api/reports/teacher-session) already scopes results per role, so this
 // component doesn't need to know which one it's running under.
 //
-// SUBSTITUTE CLASS: a row can now be "held" because a Semester Admin
+// SUBSTITUTE CLASS: a row can now be "held" because a Department Admin
 // covered the class for the assigned Teacher (r.isSubstitute). That's
 // shown with its own amber "Substitute Covered" badge, with the covering
 // admin's name, instead of the plain green "Class Held" badge — so an
@@ -112,7 +112,7 @@ export default function TeacherSessionReport() {
                 <div style={{ fontSize: 11.5, color: 'var(--txt2)' }}>{r.teacherEmail}</div>
                 {r.isSubstitute && r.substituteByName && (
                   <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginTop: 2 }}>
-                    Covered by {r.substituteByName} (Semester Admin)
+                    Covered by {r.substituteByName} (Department Admin)
                   </div>
                 )}
               </div>

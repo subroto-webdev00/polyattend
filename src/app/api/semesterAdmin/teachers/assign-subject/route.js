@@ -10,13 +10,13 @@ const VALID_SHIFTS = ['1st', '2nd', 'first', 'second'];
 const normalizeShift = shift => (shift === '1st' ? 'first' : shift === '2nd' ? 'second' : shift);
 
 // POST /api/semesterAdmin/teachers/assign-subject
-// A Semester Admin assigns a Subject to a Teacher in their own Department.
+// A Department Admin assigns a Subject to a Teacher in their own Department.
 //
 // Two rules keep this inside the caller's Department no matter what the
 // request body says:
 //   1. the Department is read from the caller's account, never from the body;
 //   2. the target Teacher must already belong to that same Department.
-// Without both, a Semester Admin could pass someone else's teacherId and
+// Without both, a Department Admin could pass someone else's teacherId and
 // create a Subject in a Department they have no authority over.
 export async function POST(request) {
   const auth = await requireAuth(request, ['semesterAdmin']);

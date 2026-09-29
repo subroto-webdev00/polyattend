@@ -48,7 +48,7 @@ export async function GET(request) {
       where.section = auth.user.section;
       if (auth.user.shift) where.shift = auth.user.shift;
     }
-    // Semester Admin is department-wide: own Department + Shift, every
+    // Department Admin is department-wide: own Department + Shift, every
     // Semester. The old `semester: { in: auth.user.semesters }` narrowing
     // belonged to the old role split.
     if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }

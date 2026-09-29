@@ -25,13 +25,13 @@ function groupByDate(entries) {
 const TODAY_CUTOFF_HOUR = 19; // 7:00 PM — same rule everywhere Missed Classes are shown
 
 // Read-only Missed Classes report — used by Admin (/admin/missed-classes,
-// all Departments), Semester Admin (own Department+
-// Shift), and Semester Admin (/semesterAdmin/missed-classes, own Department+
+// all Departments), Department Admin (own Department+
+// Shift), and Department Admin (/semesterAdmin/missed-classes, own Department+
 // Shift+Semester). Backed by the same /api/reports/missed-sessions endpoint
 // used by the Teacher's own Dashboard and Covered Miss Class page, just
 // without any Cover/Dismiss actions — this is visibility only. Actually
 // covering (or dismissing) a missed class is intentionally left to the
-// assigned Teacher themselves, not Super/Sub/Semester Admin.
+// assigned Teacher themselves, not Super/Sub/Department Admin.
 export default function MissedClassesReport() {
   const [now, setNow] = useState(new Date());
   const [entries, setEntries] = useState([]);
