@@ -5,10 +5,10 @@ export const dynamic = 'force-dynamic';
 // Roles a Department Admin is allowed to act on. `admin` is deliberately absent:
 // a Department Admin must never be able to reach a Super Admin account, even
 // just to flip its active flag.
-const SEMESTER_ADMIN_MANAGABLE_ROLES = ['teacher', 'student', 'semesterAdmin'];
+const SEMESTER_ADMIN_MANAGABLE_ROLES = ['teacher', 'student', 'departmentAdmin'];
 
 export async function PUT(request, { params }) {
-  const auth = await requireAuth(request, ['admin', 'semesterAdmin']);
+  const auth = await requireAuth(request, ['admin', 'departmentAdmin']);
   if (auth.error) return auth.error;
   try {
     const { id } = await params;
@@ -16,7 +16,7 @@ export async function PUT(request, { params }) {
     let data = { ...body };
     if (data.password) data.password = await hashPassword(data.password);
 
-    if (auth.user.role === 'semesterAdmin') {
+    if (auth.user.role === 'departmentAdmin') {
       // This used to pass the request body straight into prisma.user.update
       // with no scope check at all, so a Department Admin could rewrite anyone's
       // role, password, department or semesters — i.e. promote themselves to
@@ -51,7 +51,7 @@ export async function PUT(request, { params }) {
   } catch (error) { return errorResponse(error, 400); }
 }
 export async function DELETE(request, { params }) {
-  const auth = await requireAuth(request, ['admin', 'semesterAdmin']);
+  const auth = await requireAuth(request, ['admin', 'departmentAdmin']);
   if (auth.error) return auth.error;
   try {
     const { id } = await params;
@@ -68,7 +68,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, message: 'You cannot delete your own account' }, { status: 400 });
     }
 
-    if (auth.user.role === 'semesterAdmin') {
+    if (auth.user.role === 'departmentAdmin') {
       // Department-wide: a Department Admin manages Teachers, Students and other
       // Department Admins in their whole Department. Shift is NOT part of the
       // test any more — Teachers are no longer created with a shift, so

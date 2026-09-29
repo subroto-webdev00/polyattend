@@ -4,6 +4,28 @@ import withSerwistInit from '@serwist/next';
 const nextConfig = {
   serverExternalPackages: ['@prisma/client'],
 
+  // The middle role was renamed from "Semester Admin" to "Department Admin"
+  // and its routes moved with it. Anyone holding an old bookmark — or a link
+  // from an old email or chat — should land on the new page instead of a 404.
+  // `permanent: false` is a 307, so the browser re-checks on the next visit
+  // rather than caching the hop forever.
+  //
+  // Order matters: Next.js applies the first match, so the two paths that also
+  // changed their own segment are listed before the catch-all that just moves
+  // the prefix.
+  //
+  // API routes are deliberately NOT redirected: a stale client hitting an old
+  // API path should fail loudly rather than be silently pointed at a
+  // different handler.
+  async redirects() {
+    return [
+      { source: '/semesterAdmin/semester-admins', destination: '/departmentAdmin/department-admins', permanent: false },
+      { source: '/admin/semester-admins', destination: '/admin/department-admins', permanent: false },
+      { source: '/semesterAdmin/:path*', destination: '/departmentAdmin/:path*', permanent: false },
+      { source: '/semesterAdmin', destination: '/departmentAdmin', permanent: false },
+    ];
+  },
+
   // Security headers applied to every route (pages + API).
   async headers() {
     return [

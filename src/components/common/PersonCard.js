@@ -25,7 +25,7 @@ import { formatShift } from '@/lib/display';
 
 const ROLE_META = {
   admin: { label: 'Admin', tag: 'tag-blue', color: '#60a5fa' },
-  semesterAdmin: { label: 'Department Admin', tag: 'tag-blue', color: '#38bdf8' },
+  departmentAdmin: { label: 'Department Admin', tag: 'tag-blue', color: '#38bdf8' },
   teacher: { label: 'Teacher', tag: 'tag-green', color: '#34d399' },
   student: { label: 'Student', tag: 'tag-amber', color: '#fbbf24' },
 };
@@ -62,7 +62,7 @@ function metaForRole(p) {
         shiftLabel ? { icon: 'clock', text: `${shiftLabel} Shift` } : null,
       ].filter(Boolean);
 
-    case 'semesterAdmin':
+    case 'departmentAdmin':
       return [
         deptCode ? { icon: 'department', text: deptCode } : null,
         p.semester ? { icon: 'book', text: `Sem ${p.semester}` } : null,

@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/db';
 import sendEmail from '@/lib/sendEmail';
-import { generateToken, comparePassword, normalizeSemesterAdmin, errorResponse } from '@/lib/auth';
+import { generateToken, comparePassword, normalizeDepartmentAdmin, errorResponse } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
 const TWO_FA_ENABLED = false;
-const REQUIRES_2FA = TWO_FA_ENABLED ? ['admin', 'semesterAdmin'] : [];
+const REQUIRES_2FA = TWO_FA_ENABLED ? ['admin', 'departmentAdmin'] : [];
 
 function generateOTP() { return crypto.randomInt(100000, 1000000).toString(); }
 
@@ -39,13 +39,13 @@ export async function POST(request) {
     }
 
     const token = generateToken(user.id);
-    normalizeSemesterAdmin(user);
+    normalizeDepartmentAdmin(user);
     const response = NextResponse.json({
       success: true,
       user: {
         _id: user.id, name: user.name, email: user.email, role: user.role, shift: user.shift,
         studentId: user.studentId, departmentId: user.department, departmentCode: user.departmentCode,
-        semester: user.semester, semesters: user.role === 'semesterAdmin' ? (user.semesters?.length ? user.semesters : user.semester ? [user.semester] : []) : undefined,
+        semester: user.semester, semesters: user.role === 'departmentAdmin' ? (user.semesters?.length ? user.semesters : user.semester ? [user.semester] : []) : undefined,
         section: user.section, subjectId: user.subject,
       },
     });

@@ -6,7 +6,7 @@ import { buildSubjectReportPDF } from '@/lib/pdfReport';
 import { buildSubjectReportExcel } from '@/lib/excelReport';
 export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
-  const auth = await requireAuth(request, ['teacher','admin','semesterAdmin']);
+  const auth = await requireAuth(request, ['teacher','admin','departmentAdmin']);
   if (auth.error) return auth.error;
   try {
     const { subjectId } = await params;

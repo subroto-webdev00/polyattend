@@ -4,11 +4,11 @@ import { requireAuth, errorResponse } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_ROLES = ['admin', 'semesterAdmin'];
-const USER_ROLES = ['admin', 'semesterAdmin', 'teacher', 'student'];
+const ADMIN_ROLES = ['admin', 'departmentAdmin'];
+const USER_ROLES = ['admin', 'departmentAdmin', 'teacher', 'student'];
 
 export async function GET(request) {
-  const auth = await requireAuth(request, ['admin', 'semesterAdmin', 'teacher']);
+  const auth = await requireAuth(request, ['admin', 'departmentAdmin', 'teacher']);
   if (auth.error) return auth.error;
 
   try {
@@ -42,7 +42,7 @@ export async function GET(request) {
       ];
     }
 
-    if (auth.user.role === 'semesterAdmin') {
+    if (auth.user.role === 'departmentAdmin') {
       // Department-wide: a Department Admin now sees their entire department
       // + shift, not just the semesters on their own account. The old
       // `where.semester = { in: auth.user.semesters }` restriction came from

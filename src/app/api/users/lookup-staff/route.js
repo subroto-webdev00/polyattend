@@ -3,13 +3,13 @@ import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export async function GET(request) {
-  const auth = await requireAuth(request, ['admin', 'semesterAdmin']);
+  const auth = await requireAuth(request, ['admin', 'departmentAdmin']);
   if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get('q') || searchParams.get('name'))?.trim();
     const requestedRole = searchParams.get('role');
-    const staffRoles = ['teacher', 'semesterAdmin', 'admin'];
+    const staffRoles = ['teacher', 'departmentAdmin', 'admin'];
     const roleFilter = staffRoles.includes(requestedRole)
       ? requestedRole
       : { in: staffRoles };

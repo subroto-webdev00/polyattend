@@ -86,7 +86,7 @@ export async function GET(request) {
     // Semesters) — the old `semester: { in: ... }` narrowing is gone with
     // the old role split. Without this ordering, `?departmentId=`
     // would let a Department Admin read another department's sessions.
-    if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
+    if (auth.user.role === 'departmentAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
     const sessions = await prisma.session.findMany({ where, include: sessionInclude, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], take: 100 });
     return NextResponse.json({ success: true, count: sessions.length, sessions: sessions.map(normalizeSession) });
   } catch (error) { return errorResponse(error); }

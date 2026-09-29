@@ -6,7 +6,7 @@ import { buildSessionReportPDF } from '@/lib/pdfReport';
 import { buildSessionReportExcel } from '@/lib/excelReport';
 export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
-  const auth = await requireAuth(request, ['teacher','admin','semesterAdmin']);
+  const auth = await requireAuth(request, ['teacher','admin','departmentAdmin']);
   if (auth.error) return auth.error;
   try {
     const { sessionId } = await params;

@@ -15,9 +15,9 @@
   `attendance/student/[studentId]`, `attendance/subject/[subjectId]`,
   `departments/[id]`, `holidays/[id]`, `reports/class/[sessionId]`,
   `reports/student/[studentId]`, `reports/subject/[subjectId]`,
-  `semesterAdmin/students/[id]`, `semesterAdmin/teachers/[id]`,
+  `departmentAdmin/students/[id]`, `departmentAdmin/teachers/[id]`,
   `sessions/[id]/attendance`, `sessions/[id]/end`, `sessions/[id]`,
-  `subAdmin/semester-admins/[id]`, `subjects/[id]`, `users/[id]`
+  `subAdmin/department-admins/[id]`, `subjects/[id]`, `users/[id]`
 
   All 52 route files in the project were syntax-checked with
   `node --check` after these edits — all pass.

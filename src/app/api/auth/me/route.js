@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { requireAuth, normalizeSemesterAdmin, errorResponse } from '@/lib/auth';
+import { requireAuth, normalizeDepartmentAdmin, errorResponse } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export async function GET(request) {
   const auth = await requireAuth(request);
@@ -18,7 +18,7 @@ export async function GET(request) {
     safeUser.departmentId = safeUser.department
       ? { ...safeUser.department, _id: safeUser.department.id }
       : safeUser.departmentId;
-    normalizeSemesterAdmin(safeUser);
+    normalizeDepartmentAdmin(safeUser);
     return NextResponse.json({ success: true, user: safeUser });
   } catch (error) { return errorResponse(error); }
 }

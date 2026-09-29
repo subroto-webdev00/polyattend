@@ -61,7 +61,7 @@ export function classMissedEmail({ subjectName, subjectCode, date }) {
 // alphanumeric code (valid 1 month) to complete their own registration
 // with just Email + Code (+ Password, + Roll for students).
 const ROLE_LABEL = {
-  semesterAdmin: 'Department Admin',
+  departmentAdmin: 'Department Admin',
   teacher: 'Teacher',
   student: 'Student',
 };

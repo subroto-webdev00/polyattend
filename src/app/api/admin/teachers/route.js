@@ -19,7 +19,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // invites. `?departmentId=` narrows both lists to one department.
 //
 // This is a separate route rather than a widening of
-// /api/semesterAdmin/teachers. Creating Teachers is an Admin-only action
+// /api/departmentAdmin/teachers. Creating Teachers is an Admin-only action
 // now, and keeping the two apart means the Department Admin endpoint can
 // never quietly become institution-wide.
 export async function GET(request) {

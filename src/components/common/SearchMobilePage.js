@@ -82,7 +82,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
     await runStaffSearch(name);
   };
 
-  const roleLabel = { teacher: 'Teacher', semesterAdmin: 'Department Admin', admin: 'Admin' };
+  const roleLabel = { teacher: 'Teacher', departmentAdmin: 'Department Admin', admin: 'Admin' };
 
   return (
     <div className="page">

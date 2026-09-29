@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { generateToken, normalizeSemesterAdmin, errorResponse } from '@/lib/auth';
+import { generateToken, normalizeDepartmentAdmin, errorResponse } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rateLimit';
 export const dynamic = 'force-dynamic';
 export async function POST(request) {
@@ -14,9 +14,9 @@ export async function POST(request) {
     if (!user) return NextResponse.json({ success: false, message: 'Wrong OTP or the OTP has expired' }, { status: 400 });
     if (!user.isActive) return NextResponse.json({ success: false, message: 'Account is deactivated' }, { status: 403 });
     await prisma.user.update({ where: { id: user.id }, data: { loginOTP: null, loginOTPExpire: null } });
-    normalizeSemesterAdmin(user);
+    normalizeDepartmentAdmin(user);
     const token = generateToken(user.id);
-    const response = NextResponse.json({ success: true, user: { _id: user.id, name: user.name, email: user.email, role: user.role, shift: user.shift, studentId: user.studentId, departmentId: user.department, departmentCode: user.departmentCode, semester: user.semester, semesters: user.role === 'semesterAdmin' ? (user.semesters?.length ? user.semesters : user.semester ? [user.semester] : []) : undefined, section: user.section } });
+    const response = NextResponse.json({ success: true, user: { _id: user.id, name: user.name, email: user.email, role: user.role, shift: user.shift, studentId: user.studentId, departmentId: user.department, departmentCode: user.departmentCode, semester: user.semester, semesters: user.role === 'departmentAdmin' ? (user.semesters?.length ? user.semesters : user.semester ? [user.semester] : []) : undefined, section: user.section } });
     response.cookies.set('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60, path: '/' });
     return response;
   } catch (error) { return errorResponse(error); }

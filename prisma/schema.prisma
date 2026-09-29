@@ -9,7 +9,7 @@ datasource db {
 
 enum Role {
   admin
-  semesterAdmin
+  departmentAdmin
   teacher
   student
 }
@@ -52,7 +52,7 @@ enum HolidayType {
 }
 
 enum InviteRole {
-  semesterAdmin
+  departmentAdmin
   teacher
 }
 

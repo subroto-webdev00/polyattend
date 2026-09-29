@@ -27,7 +27,7 @@ export async function POST(request) {
       if (existingSubject) return NextResponse.json({ success: false, message: 'A Teacher is already assigned for this Subject' }, { status: 400 });
     }
     const hashed = await hashPassword(password);
-    const user = await prisma.user.create({ data: { name: invite.name, email: invite.email, password: hashed, role: invite.role, departmentId: invite.departmentId, departmentCode: invite.departmentCode, shift: invite.shift, semester: invite.semester, semesters: invite.role === 'semesterAdmin' && invite.semester ? [invite.semester] : [], section: invite.section, mobile: mobile?.trim() || null, createdById: invite.invitedById, isActive: true, isVerified: true } });
+    const user = await prisma.user.create({ data: { name: invite.name, email: invite.email, password: hashed, role: invite.role, departmentId: invite.departmentId, departmentCode: invite.departmentCode, shift: invite.shift, semester: invite.semester, semesters: invite.role === 'departmentAdmin' && invite.semester ? [invite.semester] : [], section: invite.section, mobile: mobile?.trim() || null, createdById: invite.invitedById, isActive: true, isVerified: true } });
     if (invite.role === 'teacher') {
       let subject = await prisma.subject.findFirst({ where: { code: invite.subjectCode, departmentId: invite.departmentId, semester: invite.semester, section: invite.section, shift: invite.shift } });
       if (subject) { subject = await prisma.subject.update({ where: { id: subject.id }, data: { teacherId: user.id, name: invite.subjectName || subject.name } }); }

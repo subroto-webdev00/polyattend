@@ -17,8 +17,8 @@ export function comparePassword(plain, hashed) {
   return bcrypt.compare(plain, hashed);
 }
 
-export function normalizeSemesterAdmin(user) {
-  if (user?.role === 'semesterAdmin' && (!user.semesters?.length) && user.semester) {
+export function normalizeDepartmentAdmin(user) {
+  if (user?.role === 'departmentAdmin' && (!user.semesters?.length) && user.semester) {
     user.semesters = [user.semester];
   }
   return user;
@@ -57,7 +57,7 @@ export async function requireAuth(request, roles = null) {
       return { error: NextResponse.json({ success: false, message: `Role '${user.role}' is not authorized` }, { status: 403 }) };
     }
 
-    normalizeSemesterAdmin(user);
+    normalizeDepartmentAdmin(user);
     // Mongoose compat: _id alias
     user._id = user.id;
     return { user };

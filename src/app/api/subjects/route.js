@@ -51,13 +51,13 @@ export async function GET(request) {
     // Department Admin is department-wide: own Department + Shift, every
     // Semester. The old `semester: { in: auth.user.semesters }` narrowing
     // belonged to the old role split.
-    if (auth.user.role === 'semesterAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
+    if (auth.user.role === 'departmentAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
     const subjects = await prisma.subject.findMany({ where, include: subjInclude, orderBy: { name: 'asc' } });
     return NextResponse.json({ success: true, subjects: subjects.map(normalizeSubject) });
   } catch (error) { return errorResponse(error); }
 }
 export async function POST(request) {
-  const auth = await requireAuth(request, ['admin', 'semesterAdmin']);
+  const auth = await requireAuth(request, ['admin', 'departmentAdmin']);
   if (auth.error) return auth.error;
   try {
     const body = await request.json();
