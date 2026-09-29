@@ -27,7 +27,12 @@ export async function POST(request) {
       if (existingSubject) return NextResponse.json({ success: false, message: 'A Teacher is already assigned for this Subject' }, { status: 400 });
     }
     const hashed = await hashPassword(password);
-    const user = await prisma.user.create({ data: { name: invite.name, email: invite.email, password: hashed, role: invite.role, departmentId: invite.departmentId, departmentCode: invite.departmentCode, shift: invite.shift, semester: invite.semester, semesters: invite.role === 'departmentAdmin' && invite.semester ? [invite.semester] : [], section: invite.section, mobile: mobile?.trim() || null, createdById: invite.invitedById, isActive: true, isVerified: true } });
+    // A Department Admin is department-wide: they manage every Semester in
+    // their Department, so the account is created covering all of them rather
+    // than the single Semester the invite row happens to carry. Teachers are
+    // not semester-scoped at all.
+    const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+    const user = await prisma.user.create({ data: { name: invite.name, email: invite.email, password: hashed, role: invite.role, departmentId: invite.departmentId, departmentCode: invite.departmentCode, shift: invite.shift, semester: invite.semester, semesters: invite.role === 'departmentAdmin' ? [...ALL_SEMESTERS] : [], section: invite.section, mobile: mobile?.trim() || null, createdById: invite.invitedById, isActive: true, isVerified: true } });
     if (invite.role === 'teacher') {
       let subject = await prisma.subject.findFirst({ where: { code: invite.subjectCode, departmentId: invite.departmentId, semester: invite.semester, section: invite.section, shift: invite.shift } });
       if (subject) { subject = await prisma.subject.update({ where: { id: subject.id }, data: { teacherId: user.id, name: invite.subjectName || subject.name } }); }

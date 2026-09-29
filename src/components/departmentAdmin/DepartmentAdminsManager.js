@@ -7,8 +7,6 @@ import Modal from '@/components/common/Modal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 import { formatDepartment, formatShift } from '@/lib/display';
 
-const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
-
 const SHIFT_OPTIONS = [
   { value: '1st', label: '🌅 Morning Shift' },
   { value: '2nd', label: '🌙 Day Shift' },
@@ -123,7 +121,7 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', semester: '', departmentId: '', departmentCode: '', shift: '' });
+  const [form, setForm] = useState({ name: '', email: '', departmentId: '', departmentCode: '', shift: '' });
 
   const base = isAdmin ? '/admin/department-admins' : '/departmentAdmin/department-admins';
 
@@ -160,22 +158,22 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
     setForm(p => ({ ...p, departmentId: value, departmentCode: dept?.code || '' }));
   };
 
-  const emptyForm = () => setForm({ name: '', email: '', semester: '', departmentId: '', departmentCode: '', shift: '' });
+  const emptyForm = () => setForm({ name: '', email: '', departmentId: '', departmentCode: '', shift: '' });
   const openCreate = () => { emptyForm(); setShowModal(true); };
 
   const handleSubmit = async () => {
-    if (!form.email || !form.semester) return toast.error('Enter Email and Semester');
+    if (!form.email) return toast.error('Enter Email');
     if (isAdmin && (!form.departmentId || !form.shift)) {
       return toast.error('Select a Department and a Shift');
     }
     setSaving(true);
     try {
-      // If `email` already belongs to a Department Admin in the same scope, the
-      // backend just adds this Semester to their existing account instead of
-      // sending a new invite — Name isn't required in that case.
+      // No semester: a Department Admin covers every Semester in their
+      // Department. If `email` already belongs to one in the same scope the
+      // backend reports that instead of sending a duplicate invite.
       const payload = isAdmin
-        ? { name: form.name, email: form.email, semester: form.semester, departmentId: form.departmentId, shift: form.shift }
-        : { name: form.name, email: form.email, semester: form.semester };
+        ? { name: form.name, email: form.email, departmentId: form.departmentId, shift: form.shift }
+        : { name: form.name, email: form.email };
       const res = await api.post(base, payload);
       toast.success(res.data.message);
       setShowModal(false);
@@ -215,11 +213,6 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
     !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const takenSemesters = new Set([
-    ...departmentAdmins.filter(s => s.isActive).flatMap(s => (s.semesters && s.semesters.length ? s.semesters : (s.semester ? [s.semester] : []))),
-    ...pendingInvites.map(i => i.semester),
-  ]);
-
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
   return (
@@ -229,8 +222,8 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
           <h2 className="page-title">Department Admin</h2>
           <p className="page-sub">
             {isAdmin
-              ? 'Create a Department Admin in any Department and Shift, or grant an existing one another Semester'
-              : 'Create a new Department Admin, or grant an existing one another Semester in your Department and Shift'}
+              ? 'Create a Department Admin in any Department and Shift — they will cover every Semester there'
+              : 'Create a new Department Admin in your Department and Shift — they will cover every Semester there'}
           </p>
         </div>
         <button className="btn-primary" style={{ width: 'auto', padding: '9px 18px' }} onClick={openCreate}>
@@ -275,9 +268,6 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
                 <div style={{ fontSize: 11.5, color: 'var(--txt2)' }}>{inv.email}</div>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   <span className="tag tag-amber" style={{ fontSize: 10 }}>Registration Pending</span>
-                  <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
-                    Sem {inv.semester}
-                  </span>
                   {isAdmin && formatDepartment(inv.departmentId, inv.departmentCode) && (
                     <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
                       {formatDepartment(inv.departmentId, inv.departmentCode)}
@@ -333,7 +323,7 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
           <label className="form-label">Department Admin Name</label>
           <input className="form-input" placeholder="Full Name" value={form.name} onChange={set('name')} />
           <div style={{ fontSize: 11.5, color: 'var(--txt3)', marginTop: 4 }}>
-            Only needed for a brand-new person. If this Email already belongs to an existing Department Admin, the selected Semester is just added to their account — Name is ignored.
+            Only needed for a brand-new person. If this Email already belongs to a Department Admin in this Department and Shift, they already cover it — Name is ignored.
           </div>
         </div>
         <div className="form-group">
@@ -392,35 +382,9 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
           </>
         )}
 
-        <div className="form-group">
-          <label className="form-label">Semester *</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-            {SEMESTERS.map(num => {
-              const selected = String(form.semester) === String(num);
-              const taken = takenSemesters.has(num);
-              return (
-                <button
-                  key={num} type="button" disabled={taken}
-                  onClick={() => setForm(p => ({ ...p, semester: num }))}
-                  title={taken ? 'Already assigned' : ''}
-                  style={{
-                    padding: '10px 0', borderRadius: 10, textAlign: 'center',
-                    border: selected ? '2px solid var(--primary)' : '2px solid var(--border2)',
-                    background: taken ? 'var(--bg3)' : selected ? 'var(--primary-light)' : 'var(--bg)',
-                    color: taken ? 'var(--txt3)' : selected ? 'var(--primary)' : 'var(--txt)',
-                    cursor: taken ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                    fontSize: 13.5, fontWeight: 700, opacity: taken ? 0.55 : 1,
-                  }}
-                >
-                  {num}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         <div style={{ fontSize: 12, color: 'var(--txt3)', marginTop: 4, marginBottom: 4 }}>
           Submitting will send a 12-digit Registration Code to this email (valid for 1 month).
+          The new Department Admin will cover every Semester in this Department.
         </div>
 
         <div className="modal-footer">

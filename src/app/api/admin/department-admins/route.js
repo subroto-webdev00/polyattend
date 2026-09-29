@@ -66,15 +66,24 @@ export async function GET(request) {
   } catch (error) { return errorResponse(error); }
 }
 
+// Every Semester a diploma programme runs. A Department Admin is
+// department-wide, so a new account is granted all of them rather than a
+// single one picked at invite time.
+const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+
 // POST /api/admin/department-admins
 // Super Admin invites a Department Admin into a specific Department + Shift.
 // Department and Shift are required here because a Super Admin has neither
 // of their own to inherit.
+//
+// There is no Semester here on purpose. A Department Admin is department-wide
+// — they manage every Semester in their Department — so pinning the account
+// to one Semester at invite time described nothing real.
 export async function POST(request) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;
   try {
-    const { name, email, departmentId, shift, semester } = await request.json();
+    const { name, email, departmentId, shift } = await request.json();
 
     if (typeof email !== 'string' || !email.trim()) {
       return NextResponse.json({ success: false, message: 'Enter Email' }, { status: 400 });
@@ -85,11 +94,10 @@ export async function POST(request) {
     if (!VALID_SHIFTS.includes(shift)) {
       return NextResponse.json({ success: false, message: 'Select a Shift' }, { status: 400 });
     }
-
-    const semInt = Number(semester);
-    if (!Number.isInteger(semInt) || semInt < 1 || semInt > 8) {
-      return NextResponse.json({ success: false, message: 'Select a Semester (1-8)' }, { status: 400 });
-    }
+    // The form speaks 1st/2nd, Prisma's enum is first/second. Without this the
+    // raw "1st" reached prisma.user.findFirst and Prisma rejected the whole
+    // query with `Invalid value for argument 'shift': Expected Shift`.
+    const normalizedShift = shift === '1st' ? 'first' : shift === '2nd' ? 'second' : shift;
 
     // The Department must actually exist — otherwise the invite would point
     // at a dangling departmentId and the account could never be scoped.
@@ -104,13 +112,12 @@ export async function POST(request) {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = typeof name === 'string' ? name.trim() : '';
 
-    const existingSemAdmin = await prisma.user.findFirst({
+    const existingInScope = await prisma.user.findFirst({
       where: {
         role: 'departmentAdmin',
         departmentId,
-        shift,
+        shift: normalizedShift,
         isActive: true,
-        OR: [{ semesters: { has: semInt } }, { semester: semInt }],
       },
       select: { id: true, name: true },
     });
@@ -123,13 +130,13 @@ export async function POST(request) {
       },
     });
 
-    // Same rule as the Department Admin route: an existing Department Admin in
-    // the SAME department + shift simply gains the extra Semester. Never
-    // merge the email into a different role or a different scope.
+    // An existing account is never merged into this role or moved to a
+    // different Department + Shift. One already covering that scope has
+    // nothing left to be granted, so it is simply reported.
     if (existingUser) {
       const isSameScope = existingUser.role === 'departmentAdmin'
         && existingUser.departmentId === departmentId
-        && existingUser.shift === shift;
+        && existingUser.shift === normalizedShift;
 
       if (!isSameScope) {
         return NextResponse.json({ success: false, message: 'An account already exists with this email' }, { status: 400 });
@@ -137,45 +144,32 @@ export async function POST(request) {
       if (!existingUser.isActive) {
         return NextResponse.json({
           success: false,
-          message: 'This Department Admin is inactive. Activate the account before adding another Semester.',
+          message: 'This Department Admin is inactive. Activate the account first.',
         }, { status: 400 });
       }
 
-      const assignedSemesters = new Set(
+      // Their semester list may predate the department-wide model. Backfill it
+      // rather than pretending there is a Semester left to add.
+      const assigned = new Set(
         (Array.isArray(existingUser.semesters) ? existingUser.semesters : [])
           .map(Number).filter(Number.isInteger),
       );
-      if (existingUser.semester != null) {
-        const legacy = Number(existingUser.semester);
-        if (Number.isInteger(legacy)) assignedSemesters.add(legacy);
-      }
-      if (assignedSemesters.has(semInt)) {
-        return NextResponse.json({
-          success: false,
-          message: `${existingUser.name || 'This Department Admin'} already manages Semester ${semInt}`,
-        }, { status: 400 });
-      }
-      if (existingSemAdmin && existingSemAdmin.id !== existingUser.id) {
-        return NextResponse.json({
-          success: false,
-          message: `A Department Admin (${existingSemAdmin.name || 'Unnamed'}) already exists for Semester ${semInt}`,
-        }, { status: 400 });
-      }
-
-      assignedSemesters.add(semInt);
-      const updatedUser = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          semesters: Array.from(assignedSemesters).sort((a, b) => a - b),
-          ...(existingUser.semester == null ? { semester: semInt } : {}),
-        },
-        select: { id: true, name: true, email: true, role: true, departmentId: true, shift: true, semesters: true, semester: true },
-      });
+      const needsBackfill = ALL_SEMESTERS.some(s => !assigned.has(s));
+      const updatedUser = needsBackfill
+        ? await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { semesters: [...ALL_SEMESTERS], semester: existingUser.semester ?? ALL_SEMESTERS[0] },
+            select: { id: true, name: true, email: true, role: true, departmentId: true, shift: true, semesters: true, semester: true },
+          })
+        : existingUser;
 
       return NextResponse.json({
         success: true,
-        addedToExisting: true,
-        message: `Semester ${semInt} added to ${updatedUser.name || 'the existing Department Admin'}'s account`,
+        alreadyExists: true,
+        updated: needsBackfill,
+        message: needsBackfill
+          ? `${updatedUser.name || 'This Department Admin'} now covers all Semesters`
+          : `${updatedUser.name || 'This Department Admin'} already covers this Department and Shift`,
         departmentAdmin: { ...updatedUser, _id: updatedUser.id },
       });
     }
@@ -184,20 +178,20 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Enter Name for the new Department Admin' }, { status: 400 });
     }
 
-    if (existingSemAdmin) {
+    if (existingInScope) {
       return NextResponse.json({
         success: false,
-        message: `A Department Admin (${existingSemAdmin.name || 'Unnamed Department Admin'}) already exists for Semester ${semInt}`,
+        message: `A Department Admin (${existingInScope.name || 'Unnamed'}) already covers this Department and Shift`,
       }, { status: 400 });
     }
 
     const existingInvite = await prisma.adminInvite.findFirst({
-      where: { role: 'departmentAdmin', departmentId, shift, semester: semInt, used: false, codeExpire: { gt: new Date() } },
+      where: { role: 'departmentAdmin', departmentId, shift: normalizedShift, used: false, codeExpire: { gt: new Date() } },
     });
     if (existingInvite) {
       return NextResponse.json({
         success: false,
-        message: `An invite (${existingInvite.email}) is already pending for Semester ${semInt}`,
+        message: `An invite (${existingInvite.email}) is already pending for this Department and Shift`,
       }, { status: 400 });
     }
 
@@ -209,8 +203,8 @@ export async function POST(request) {
         email: normalizedEmail,
         departmentId,
         departmentCode: department.code || null,
-        shift,
-        semester: semInt,
+        shift: normalizedShift,
+        semester: ALL_SEMESTERS[0],
         invitedById: auth.user.id,
         code,
         codeExpire: oneMonthFromNow(),
