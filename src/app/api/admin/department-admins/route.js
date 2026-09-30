@@ -13,12 +13,12 @@ const VALID_SHIFTS = ['1st', '2nd', 'first', 'second'];
 // Super Admin view: EVERY Department Admin in the institution, plus their
 // pending invites. `?departmentId=` narrows the list to one department.
 //
-// This deliberately lives in its own route rather than widening
-// /api/departmentAdmin/department-admins: that endpoint is scoped to the
-// caller's own Department + Shift, and an admin has neither, so letting it
-// in would mean re-deriving the scope on every branch. Keeping the two
-// apart means the Department Admin route can never accidentally become
-// institution-wide.
+// This is the only route for the job. There used to be a Department Admin
+// equivalent scoped to the caller's own Department + Shift, but that scope
+// holds exactly one account — themselves — so every invite it could send came
+// straight back as "already covers this Department and Shift". Hiring another
+// Department Admin is a Super Admin action, and only they can pick the
+// Department and Shift, so there is nothing left for the other route to do.
 export async function GET(request) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;

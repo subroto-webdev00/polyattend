@@ -1,8 +1,8 @@
 import DepartmentAdminsManager from '@/components/departmentAdmin/DepartmentAdminsManager';
 
-// Super Admin view of Department Admins. `isAdmin` switches the shared
-// component to institution-wide scope and adds the Department / Shift
-// pickers to the invite form, since a Super Admin has neither of their own.
+// Super Admin view of Department Admins. This is the only place one can be
+// created — a Department Admin's own scope is a single Department + Shift, so
+// they have nothing to hire into.
 export default function Page() {
-  return <DepartmentAdminsManager isAdmin />;
+  return <DepartmentAdminsManager />;
 }

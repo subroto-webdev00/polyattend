@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // DELETE /api/admin/department-admins/[id]
 // A Super Admin can cancel a pending invite or deactivate a Department Admin
 // anywhere in the institution, so there is deliberately no Department + Shift
-// scope check here (unlike the Department Admin's own route).
+// scope check here.
 export async function DELETE(request, { params }) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;

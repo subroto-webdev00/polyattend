@@ -5,7 +5,6 @@ import AppShell from '@/components/common/AppShell';
 const navItems = [
   { label: 'Dashboard', icon: 'dashboard', path: '/departmentAdmin' },
   { section: 'Management' },
-  { label: 'Department Admins', icon: 'users', path: '/departmentAdmin/department-admins' },
   { label: 'Teacher Management', icon: 'school', path: '/departmentAdmin/teachers' },
   { label: 'Student Validation', icon: 'users', path: '/departmentAdmin/students' },
   { label: 'Semester Promotion', icon: 'chevronRight', path: '/departmentAdmin/promotion' },

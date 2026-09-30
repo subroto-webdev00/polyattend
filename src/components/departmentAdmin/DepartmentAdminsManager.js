@@ -104,13 +104,14 @@ function DepartmentAdminCard({ person, onToggle, onDelete }) {
   );
 }
 
-// `isAdmin` switches this into Super Admin mode:
-//   - reads from /api/admin/department-admins (institution-wide) instead of
-//     the Department+Shift scoped /api/departmentAdmin/department-admins
-//   - shows a Department filter plus Department / Shift pickers in the form,
-//     because a Super Admin has no Department or Shift of their own
-//   - one shared component instead of a near-duplicate admin-only page
-export default function DepartmentAdminsManager({ isAdmin = false }) {
+// Super Admin screen for Department Admins.
+//
+// A Department Admin has no version of this any more. Their scope is a single
+// Department + Shift, so the only account they could ever invite into it is
+// themselves — the invite always came back "already covers this Department
+// and Shift". Hiring another Department Admin is a Super Admin action, so
+// this is now the only caller and needs no mode switch.
+export default function DepartmentAdminsManager() {
   const [departmentAdmins, setDepartmentAdmins] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -123,30 +124,29 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
   const [cancellingId, setCancellingId] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', departmentId: '', departmentCode: '', shift: '' });
 
-  const base = isAdmin ? '/admin/department-admins' : '/departmentAdmin/department-admins';
+  const base = '/admin/department-admins';
 
   // useCallback so the effect below depends on `load` itself rather than on
   // a hand-listed subset — `base` and `deptFilter` both change which
   // endpoint and query string are used, so they must be real dependencies.
   const load = useCallback(() => {
     setLoading(true);
-    const query = isAdmin && deptFilter ? `?departmentId=${encodeURIComponent(deptFilter)}` : '';
+    const query = deptFilter ? `?departmentId=${encodeURIComponent(deptFilter)}` : '';
     api.get(`${base}${query}`)
       .then(r => {
         setDepartmentAdmins(r.data.departmentAdmins || []);
         setPendingInvites(r.data.pendingInvites || []);
       })
       .finally(() => setLoading(false));
-  }, [base, isAdmin, deptFilter]);
+  }, [base, deptFilter]);
 
   useEffect(() => { load(); }, [load]);
 
-  // The Department dropdown is only meaningful for a Super Admin, so the
-  // Department Admin view never fetches the department list.
+  // The Department list backs both the filter and the form's picker. A Super
+  // Admin has no Department of their own, so it is always needed here.
   useEffect(() => {
-    if (!isAdmin) return;
     api.get('/departments').then(r => setDepartments(r.data.departments || [])).catch(() => {});
-  }, [isAdmin]);
+  }, []);
 
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }));
 
@@ -163,7 +163,7 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
 
   const handleSubmit = async () => {
     if (!form.email) return toast.error('Enter Email');
-    if (isAdmin && (!form.departmentId || !form.shift)) {
+    if (!form.departmentId || !form.shift) {
       return toast.error('Select a Department and a Shift');
     }
     setSaving(true);
@@ -171,10 +171,9 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
       // No semester: a Department Admin covers every Semester in their
       // Department. If `email` already belongs to one in the same scope the
       // backend reports that instead of sending a duplicate invite.
-      const payload = isAdmin
-        ? { name: form.name, email: form.email, departmentId: form.departmentId, shift: form.shift }
-        : { name: form.name, email: form.email };
-      const res = await api.post(base, payload);
+      const res = await api.post(base, {
+        name: form.name, email: form.email, departmentId: form.departmentId, shift: form.shift,
+      });
       toast.success(res.data.message);
       setShowModal(false);
       load();
@@ -221,9 +220,7 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
         <div>
           <h2 className="page-title">Department Admin</h2>
           <p className="page-sub">
-            {isAdmin
-              ? 'Create a Department Admin in any Department and Shift — they will cover every Semester there'
-              : 'Create a new Department Admin in your Department and Shift — they will cover every Semester there'}
+            Create a Department Admin in any Department and Shift — they will cover every Semester there
           </p>
         </div>
         <button className="btn-primary" style={{ width: 'auto', padding: '9px 18px' }} onClick={openCreate}>
@@ -231,8 +228,8 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
         </button>
       </div>
 
-      {/* Super Admin sees every department, so it needs a way to narrow down. */}
-      {isAdmin && (
+      {/* Every department is in scope here, so the list needs a way to narrow down. */}
+      {(
         <div className="form-group" style={{ maxWidth: 320 }}>
           <label className="form-label">Department</label>
           <select className="form-select" value={deptFilter} onChange={e => setDeptFilter(e.target.value)}>
@@ -268,13 +265,13 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
                 <div style={{ fontSize: 11.5, color: 'var(--txt2)' }}>{inv.email}</div>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   <span className="tag tag-amber" style={{ fontSize: 10 }}>Registration Pending</span>
-                  {isAdmin && formatDepartment(inv.departmentId, inv.departmentCode) && (
+                  {formatDepartment(inv.departmentId, inv.departmentCode) && (
                     <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
                       {formatDepartment(inv.departmentId, inv.departmentCode)}
                     </span>
                   )}
                 </div>
-                {isAdmin && inv.shift && (
+                {inv.shift && (
                   <span style={{ fontSize: 10.5, color: 'var(--txt2)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: 20, fontWeight: 600, alignSelf: 'flex-start' }}>
                     {formatShift(inv.shift)} Shift
                   </span>
@@ -334,7 +331,7 @@ export default function DepartmentAdminsManager({ isAdmin = false }) {
         {/* A Super Admin has no Department or Shift of their own, so both are
             picked here. The Department Admin view inherits both from their
             account instead. */}
-        {isAdmin && (
+        {(
           <>
             <div className="form-group">
               <label className="form-label">Department *</label>
