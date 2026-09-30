@@ -22,7 +22,15 @@ export async function POST(request) {
       await prisma.adminInvite.update({ where: { id: invite.id }, data: { used: true, usedAt: new Date() } });
       return NextResponse.json({ success: false, message: 'An account already exists with this email' }, { status: 400 });
     }
-    if (invite.role === 'teacher') {
+    // A Teacher invite does not have to name a Subject. The Create Teacher form
+    // deliberately does not ask for one — a Subject belongs to a Semester and a
+    // Group, and is attached afterwards from the Teacher Management screen.
+    // Querying on a null `code` is a Prisma error ("Argument 'code' must not be
+    // null"), so the subject step is skipped entirely when the invite has none,
+    // and the Teacher is created with no Subject until one is assigned.
+    const hasSubject = Boolean(invite.subjectCode);
+
+    if (invite.role === 'teacher' && hasSubject) {
       const existingSubject = await prisma.subject.findFirst({ where: { code: invite.subjectCode, departmentId: invite.departmentId, semester: invite.semester, section: invite.section, shift: invite.shift, teacherId: { not: null } } });
       if (existingSubject) return NextResponse.json({ success: false, message: 'A Teacher is already assigned for this Subject' }, { status: 400 });
     }
@@ -33,7 +41,7 @@ export async function POST(request) {
     // not semester-scoped at all.
     const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
     const user = await prisma.user.create({ data: { name: invite.name, email: invite.email, password: hashed, role: invite.role, departmentId: invite.departmentId, departmentCode: invite.departmentCode, shift: invite.shift, semester: invite.semester, semesters: invite.role === 'departmentAdmin' ? [...ALL_SEMESTERS] : [], section: invite.section, mobile: mobile?.trim() || null, createdById: invite.invitedById, isActive: true, isVerified: true } });
-    if (invite.role === 'teacher') {
+    if (invite.role === 'teacher' && hasSubject) {
       let subject = await prisma.subject.findFirst({ where: { code: invite.subjectCode, departmentId: invite.departmentId, semester: invite.semester, section: invite.section, shift: invite.shift } });
       if (subject) { subject = await prisma.subject.update({ where: { id: subject.id }, data: { teacherId: user.id, name: invite.subjectName || subject.name } }); }
       else { subject = await prisma.subject.create({ data: { name: invite.subjectName, code: invite.subjectCode, departmentId: invite.departmentId, semester: invite.semester, section: invite.section, shift: invite.shift, teacherId: user.id } }); }
