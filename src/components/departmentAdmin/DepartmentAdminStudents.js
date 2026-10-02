@@ -11,6 +11,29 @@ import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 // account happens to hold.
 const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
+// The four teaching Groups of a Section. Mirrors the server's own GROUPS
+// check in /api/departmentAdmin/students, so a Group that can never be stored
+// never appears as a filter here either.
+const GROUPS = ['A', 'B', 'C', 'D'];
+
+// `section` is a Prisma enum (Section = A|B|C|D), so the only value that can
+// fall outside GROUPS is null — an unassigned student. Normalising still guards
+// against whitespace/casing in anything that ever bypasses the enum.
+const normalizeGroup = section => {
+  const g = String(section || '').trim().toUpperCase();
+  return GROUPS.find(x => g === x || g.startsWith(x)) || '';
+};
+
+// A distinct colour per Group so the badge is recognisable at a glance while
+// scrolling, rather than four identical lettered squares.
+const GROUP_ACCENT = {
+  A: { bg: '#dbeafe', fg: '#1d4ed8' },
+  B: { bg: '#ede9fe', fg: '#6d28d9' },
+  C: { bg: '#d1fae5', fg: '#047857' },
+  D: { bg: '#fef3c7', fg: '#b45309' },
+  unassigned: { bg: '#f1f5f9', fg: '#64748b' },
+};
+
 export default function DepartmentAdminStudents() {
   // Student Validation is kept SEPARATE per Semester — never a merged list.
   // A Department Admin is department-wide, so all eight Semesters are offered
@@ -31,6 +54,12 @@ export default function DepartmentAdminStudents() {
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all | pending | used
+  // Which Group's students are on screen. 'all' shows every Group under its
+  // own heading instead of one merged list, because a Section's roll numbers
+  // only mean anything relative to the Group they belong to.
+  const [groupFilter, setGroupFilter] = useState('all');
+  // Group headings start open; a Collapse toggle remembers per Group.
+  const [collapsed, setCollapsed] = useState({});
   const [form, setForm] = useState({ name: '', roll: '', email: '', section: '' });
   const [uploadResult, setUploadResult] = useState(null);
   const fileInputRef = useRef(null);
@@ -47,7 +76,14 @@ export default function DepartmentAdminStudents() {
 
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }));
 
-  const openCreate = () => { setForm({ name: '', roll: '', email: '', section: '' }); setShowModal(true); };
+  // Pre-selects the Group currently being viewed. Adding a student while looking
+  // at Group B should not make you re-pick B from a form that also asks for
+  // everything you already know.
+  const openCreate = () => {
+    const preset = groupFilter === 'all' ? '' : groupFilter;
+    setForm({ name: '', roll: '', email: '', section: preset });
+    setShowModal(true);
+  };
 
   const handleSubmit = async () => {
     if (!form.name || !form.roll || !form.email || !form.section) return toast.error('Enter Name, Roll, Email and Group');
@@ -91,7 +127,10 @@ export default function DepartmentAdminStudents() {
     }
   };
 
-  const filtered = entries.filter(en => {
+  // Status + search only. Group is applied separately below so the Group chip
+// counts describe what a click would actually reveal rather than collapsing
+// to zero once a Group is already selected.
+  const searched = entries.filter(en => {
     if (statusFilter === 'pending' && en.used) return false;
     if (statusFilter === 'used' && !en.used) return false;
     if (search && !en.roll.toLowerCase().includes(search.toLowerCase()) && !en.email.toLowerCase().includes(search.toLowerCase())) return false;
@@ -100,6 +139,35 @@ export default function DepartmentAdminStudents() {
 
   const pendingCount = entries.filter(en => !en.used).length;
   const usedCount = entries.filter(en => en.used).length;
+
+  // One bucket per Group that actually has students, in A→D order, plus an
+  // "Unassigned" bucket last for anything the server let through without a
+  // usable Group letter.
+  const groupBuckets = GROUPS
+    .map(g => ({
+      key: g,
+      label: `Group ${g}`,
+      items: searched.filter(en => normalizeGroup(en.section) === g),
+    }))
+    .filter(b => b.items.length > 0);
+
+  const unassigned = searched.filter(en => !normalizeGroup(en.section));
+  if (unassigned.length) {
+    groupBuckets.push({ key: 'unassigned', label: 'Unassigned', items: unassigned });
+  }
+
+  const visibleBuckets = groupFilter === 'all'
+    ? groupBuckets
+    : groupBuckets.filter(b => b.key === groupFilter);
+
+  // Counts shown on the chips: taken from `searched` so they stay put when a
+  // Group is selected, and add up to what a user can actually see.
+  const groupCounts = Object.fromEntries(GROUPS.map(g => [g, 0]));
+  for (const en of searched) {
+    const g = normalizeGroup(en.section);
+    if (g) groupCounts[g] += 1;
+  }
+  const unassignedCount = unassigned.length;
 
   // Not yet registered — nothing real to lose beyond the pre-approval
   // entry itself, so a lightweight confirm is enough (no typed-name step).
@@ -245,51 +313,182 @@ export default function DepartmentAdminStudents() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {/* GROUP FILTER — a Section's roll numbers only mean something relative
+          to their Group, so this sits directly under the status filter. */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--txt3)', marginRight: 2 }}>Group</span>
+        {[
+          { key: 'all', label: `All Groups (${searched.length})` },
+          ...GROUPS.map(g => ({ key: g, label: `${g} (${groupCounts[g]})` })),
+          ...(unassignedCount ? [{ key: 'unassigned', label: `Unassigned (${unassignedCount})` }] : []),
+        ].map(f => {
+          const active = groupFilter === f.key;
+          // A chip with nothing behind it stays visible but disabled, so the
+          // layout does not jump around as students are added.
+          const empty = f.key !== 'all' && (f.key === 'unassigned' ? !unassignedCount : groupCounts[f.key] === 0);
+          return (
+            <button
+              key={f.key}
+              onClick={() => setGroupFilter(f.key)}
+              disabled={empty}
+              className="group-chip"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 999, cursor: empty ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+                border: `1px solid ${active ? 'var(--primary)' : 'var(--border2)'}`,
+                background: active ? 'var(--primary)' : 'var(--bg)',
+                color: active ? '#fff' : empty ? 'var(--txt3)' : 'var(--txt2)',
+                opacity: empty ? 0.5 : 1,
+                transition: 'all .18s ease',
+              }}
+            >
+              {f.key !== 'all' && f.key !== 'unassigned' && (
+                <span style={{
+                  width: 16, height: 16, borderRadius: 5, display: 'grid', placeItems: 'center',
+                  fontSize: 10, fontWeight: 800,
+                  background: active ? 'rgba(255,255,255,.22)' : 'var(--primary-light)',
+                  color: active ? '#fff' : 'var(--primary)',
+                }}>
+                  {f.key}
+                </span>
+              )}
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {visibleBuckets.length === 0 ? (
         <div className="card fade-in">
           <div className="empty">
             <div className="empty-icon"><Icon name="clipboard" size={24} /></div>
             <p>No data yet</p>
+            <p style={{ fontSize: 12, color: 'var(--txt3)', marginTop: 4 }}>
+              {entries.length === 0
+                ? `No students pre-approved for Semester ${selectedSemester} yet.`
+                : groupFilter !== 'all'
+                  ? `No students in ${groupFilter === 'unassigned' ? 'Unassigned' : `Group ${groupFilter}`} match the current filter.`
+                  : 'No students match the current filter.'}
+            </p>
+            {groupFilter !== 'all' && (
+              <button
+                onClick={() => setGroupFilter('all')}
+                style={{
+                  marginTop: 10, padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+                  border: '1px solid var(--primary)', background: 'var(--primary-light)', color: 'var(--primary)',
+                }}
+              >
+                Show all groups
+              </button>
+            )}
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {filtered.map((en, i) => (
-            <div
-              key={en._id}
-              className="student-row"
-              style={{
-                background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
-                padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                animation: `fadeInUp .35s ease ${Math.min(i * 0.03, 0.5)}s both`,
-              }}
-            >
-              <span className={en.used ? 'dot-used' : 'dot-pending'} style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 160 }}>
-                <div style={{ fontWeight: 700, fontSize: 13.5 }}>
-                  {en.name ? en.name : `Roll: ${en.roll}`}
-                </div>
-                <div style={{ fontSize: 11.5, color: 'var(--txt2)' }}>
-                  {en.name ? `Roll: ${en.roll} • ` : ''}{en.email}{en.section ? ` • Group ${en.section}` : ''}
-                </div>
-              </div>
-              <span className={`tag ${en.used ? 'tag-green' : 'tag-amber'}`}>
-                {en.used ? 'Registration Complete' : 'Pending'}
-              </span>
-              <button
-                onClick={() => en.used ? setDeleteTarget(en) : handleDeletePending(en)}
-                title="Delete"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {visibleBuckets.map(bucket => {
+            const isOpen = !collapsed[bucket.key];
+            const bucketPending = bucket.items.filter(en => !en.used).length;
+            const bucketDone = bucket.items.length - bucketPending;
+            const accent = GROUP_ACCENT[bucket.key] || GROUP_ACCENT.unassigned;
+            return (
+              <section
+                key={bucket.key}
+                className="group-block"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  border: '1px solid var(--danger-light)', borderRadius: 8, cursor: 'pointer',
-                  padding: '5px 10px', fontSize: 11, fontWeight: 700,
-                  fontFamily: 'inherit', background: 'transparent', color: 'var(--danger)',
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)', overflow: 'hidden',
                 }}
               >
-                <Icon name="trash" size={11} />
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => setCollapsed(p => ({ ...p, [bucket.key]: isOpen }))}
+                  aria-expanded={isOpen}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '11px 14px', border: 'none', cursor: 'pointer',
+                    background: 'transparent', fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                >
+                  <span style={{
+                    width: 28, height: 28, borderRadius: 9, flexShrink: 0,
+                    display: 'grid', placeItems: 'center',
+                    fontSize: 13, fontWeight: 800,
+                    background: accent.bg, color: accent.fg,
+                  }}>
+                    {bucket.key === 'unassigned' ? '?' : bucket.key}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontWeight: 800, fontSize: 13.5, color: 'var(--txt)' }}>
+                      {bucket.label}
+                      <span style={{ fontWeight: 600, color: 'var(--txt3)', marginLeft: 6, fontSize: 12 }}>
+                        Semester {selectedSemester}
+                      </span>
+                    </span>
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--txt3)', marginTop: 1 }}>
+                      {bucketPending > 0 && <>{bucketPending} pending</>}
+                      {bucketPending > 0 && bucketDone > 0 && ' • '}
+                      {bucketDone > 0 && <>{bucketDone} completed</>}
+                    </span>
+                  </span>
+                  <span style={{
+                    fontSize: 12, fontWeight: 800, color: 'var(--txt2)',
+                    background: 'var(--bg3)', borderRadius: 999, padding: '3px 10px', flexShrink: 0,
+                  }}>
+                    {bucket.items.length}
+                  </span>
+                  <span style={{
+                    color: 'var(--txt3)', display: 'grid', placeItems: 'center', flexShrink: 0,
+                    transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform .2s ease',
+                  }}>
+                    <Icon name="chevronDown" size={15} />
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {bucket.items.map((en, i) => (
+                      <div
+                        key={en._id}
+                        className="student-row"
+                        style={{
+                          background: 'var(--bg3)', border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius-md, 10px)',
+                          padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                          animation: `fadeInUp .35s ease ${Math.min(i * 0.03, 0.5)}s both`,
+                        }}
+                      >
+                        <span className={en.used ? 'dot-used' : 'dot-pending'} style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 160 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                            {en.name ? en.name : `Roll: ${en.roll}`}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--txt2)', wordBreak: 'break-word' }}>
+                            {en.name ? `Roll: ${en.roll} • ` : ''}{en.email}
+                          </div>
+                        </div>
+                        <span className={`tag ${en.used ? 'tag-green' : 'tag-amber'}`}>
+                          {en.used ? 'Registration Complete' : 'Pending'}
+                        </span>
+                        <button
+                          onClick={() => en.used ? setDeleteTarget(en) : handleDeletePending(en)}
+                          title="Delete"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            border: '1px solid var(--danger-light)', borderRadius: 8, cursor: 'pointer',
+                            padding: '5px 10px', fontSize: 11, fontWeight: 700,
+                            fontFamily: 'inherit', background: 'transparent', color: 'var(--danger)',
+                          }}
+                        >
+                          <Icon name="trash" size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
 

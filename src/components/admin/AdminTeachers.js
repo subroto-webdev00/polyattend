@@ -28,14 +28,22 @@ export default function AdminTeachers() {
   const [saving, setSaving] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
   const [resendingId, setResendingId] = useState(null);
+  // Holds the code that was just copied, so its button can tick instead of
+  // flipping back immediately.
+  const [copiedCode, setCopiedCode] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [assignTarget, setAssignTarget] = useState(null);
 
-  // Create-Teacher form. Note there is no semester / section / subject /
-  // shift field here on purpose — those describe a Subject, not a person,
-  // and are collected in the "Assign Subject" step instead.
+  // Create-Teacher form. Subject / Semester / Group are deliberately absent —
+  // those describe a Subject, not a person, and are collected in the
+  // "Assign Subject" step. Shift IS asked here: a teacher belongs to one
+  // shift for the whole of their teaching, and asking it up front means every
+  // Subject they are later given is automatically in their own shift. Left
+  // blank it used to stay null and silently inherit whatever the first
+  // assigned Subject happened to be, which is how subjects ended up filed
+  // against the wrong shift.
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', departmentId: '' });
+  const [form, setForm] = useState({ name: '', email: '', departmentId: '', shift: '' });
 
   const [assignForm, setAssignForm] = useState({ subjectName: '', subjectCode: '', semester: null, section: '', shift: '' });
 
@@ -57,7 +65,7 @@ export default function AdminTeachers() {
   const setAssign = f => e => setAssignForm(p => ({ ...p, [f]: e.target.value }));
 
   const openCreate = () => {
-    setForm({ name: '', email: '', departmentId: deptFilter || '' });
+    setForm({ name: '', email: '', departmentId: deptFilter || '', shift: '' });
     setShowCreate(true);
   };
 
@@ -65,6 +73,7 @@ export default function AdminTeachers() {
     if (!form.name.trim()) return toast.error('Enter Name for the new Teacher');
     if (!form.email.trim()) return toast.error('Enter Email');
     if (!form.departmentId) return toast.error('Select a Department');
+    if (!form.shift) return toast.error('Select a Shift');
 
     setSaving(true);
     try {
@@ -120,6 +129,31 @@ export default function AdminTeachers() {
       toast.success(teacher.isActive ? 'Deactivated' : 'Activated');
       load();
     } catch { toast.error('Error'); }
+  };
+
+  // Clipboard API needs a secure context; on plain http://localhost some
+  // browsers reject it, so fall back to a hidden textarea + execCommand rather
+  // than leaving the Admin with no way to copy the code.
+  const copyInviteCode = async (code) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedCode(code);
+      toast.success('Code copied');
+      setTimeout(() => setCopiedCode(prev => (prev === code ? null : prev)), 1800);
+    } catch {
+      toast.error('Could not copy — select the code and copy manually');
+    }
   };
 
   const cancelInvite = async (invite) => {
@@ -203,18 +237,66 @@ export default function AdminTeachers() {
                 display: 'flex', flexDirection: 'column', gap: 6,
               }}>
                 <div style={{ fontWeight: 700, fontSize: 13.5 }}>{inv.name}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--txt2)' }}>{inv.email}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--txt2)', wordBreak: 'break-all' }}>{inv.email}</div>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   <span className="tag tag-amber" style={{ fontSize: 10 }}>Registration Pending</span>
                   {formatDepartment(inv.departmentId, inv.departmentCode) && (
                     <span className="sa-chip">{formatDepartment(inv.departmentId, inv.departmentCode)}</span>
                   )}
-                  {inv.shift && (
+                  {inv.shift ? (
                     <span className="sa-chip">{formatShift(inv.shift)} Shift</span>
+                  ) : (
+                    <span className="sa-chip" style={{ opacity: 0.6 }}>No Shift</span>
                   )}
                 </div>
-                <div style={{ fontSize: 10.5, color: 'var(--txt3)' }}>
-                  Subjects and shift are assigned after they register.
+
+                {/* The registration code. Shown because the invite e-mail may
+                    not reach a teacher who has not set up their address yet,
+                    and a Super Admin has to be able to read the code out over
+                    the phone. It is styled distinctly from the chips above so
+                    it can never be mistaken for a department id again. */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'var(--bg3)', borderRadius: 8, padding: '7px 9px',
+                }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 9.5, color: 'var(--txt3)', fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                      Registration Code
+                    </div>
+                    <div style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      fontSize: 14, fontWeight: 700, letterSpacing: 1.5,
+                      color: 'var(--primary)', wordBreak: 'break-all',
+                    }}>
+                      {inv.code || '—'}
+                    </div>
+                  </div>
+                  {inv.code && (
+                    <button
+                      onClick={() => copyInviteCode(inv.code)}
+                      title="Copy code"
+                      style={{
+                        flexShrink: 0, display: 'grid', placeItems: 'center',
+                        width: 30, height: 30, borderRadius: 8, cursor: 'pointer',
+                        border: '1px solid var(--border2)', background: 'var(--bg)', color: 'var(--txt2)', fontFamily: 'inherit',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--txt2)'; e.currentTarget.style.borderColor = 'var(--border2)'; }}
+                    >
+                      <Icon name={copiedCode === inv.code ? 'check' : 'copy'} size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ fontSize: 10.5, color: 'var(--txt3)', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <span>
+                    {inv.shift
+                      ? 'Subjects are assigned after they register.'
+                      : 'Assign a Subject to set their Shift.'}
+                  </span>
+                  {inv.codeExpire && (
+                    <span style={{ flexShrink: 0 }}>Expires {new Date(inv.codeExpire).toLocaleDateString('en-GB')}</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
                   <button
@@ -303,6 +385,17 @@ export default function AdminTeachers() {
               No departments yet — create one from the Departments page first.
             </span>
           )}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Shift *</label>
+          <select className="form-select" value={form.shift} onChange={set('shift')}>
+            <option value="">— Select Shift —</option>
+            {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <span style={{ fontSize: 11.5, color: 'var(--txt3)', marginTop: 4, display: 'block' }}>
+            Every Subject assigned to this Teacher will be in this Shift.
+          </span>
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--txt3)', marginTop: 4, marginBottom: 4 }}>
