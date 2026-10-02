@@ -292,7 +292,12 @@ export default function AdminDashboard() {
         <QuickActions
           actions={[
             { icon: 'users', label: 'Add Teacher', accent: 'blue', onClick: () => router.push('/admin/teachers') },
-            { icon: 'book', label: 'Add Subject', accent: 'emerald', onClick: () => router.push('/admin/subjects') },
+            // Labelled "View Subject" because /admin/subjects is a read-only
+            // list grouped by department: it has no create form, so "Add
+            // Subject" sent you somewhere that cannot add one. Subjects are
+            // created from Teacher Management -> Assign Subject, which needs a
+            // teacher and a group to file them under.
+            { icon: 'book', label: 'View Subject', accent: 'emerald', onClick: () => router.push('/admin/subjects') },
             { icon: 'excel', label: 'Generate Report', accent: 'purple', onClick: () => router.push('/admin/reports') },
             { icon: 'settings', label: 'Manage Users', accent: 'cyan', onClick: () => router.push('/admin/users') },
           ]}
