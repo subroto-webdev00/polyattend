@@ -10,7 +10,7 @@ export async function POST(request) {
     if (!email || !otp || !newPassword) return NextResponse.json({ success: false, message: 'Enter all fields' }, { status: 400 });
     const pwCheck = isStrongPassword(newPassword);
     if (!pwCheck.ok) return NextResponse.json({ success: false, message: pwCheck.message }, { status: 400 });
-    const limited = checkRateLimit(request, 'reset-password', email, { limit: 6, windowMs: 10 * 60 * 1000 });
+    const limited = await checkRateLimit(request, 'reset-password', email, { limit: 6, windowMs: 10 * 60 * 1000 });
     if (limited) return NextResponse.json({ success: false, message: limited.message }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } });
     const user = await prisma.user.findFirst({ where: { email: email.toLowerCase(), resetPasswordOTP: otp, resetPasswordExpire: { gt: new Date() } } });
     if (!user) return NextResponse.json({ success: false, message: 'Wrong OTP or the OTP has expired' }, { status: 400 });

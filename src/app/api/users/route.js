@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
+import { cacheWrap, cacheKey } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
 const ADMIN_ROLES = ['admin', 'departmentAdmin'];
 const USER_ROLES = ['admin', 'departmentAdmin', 'teacher', 'student'];
+
+// Short, because a wrong count on a dashboard is more alarming than a slow
+// one. Every write that changes a user count clears this namespace.
+const COUNT_TTL = 20;
 
 export async function GET(request) {
   const auth = await requireAuth(request, ['admin', 'departmentAdmin', 'teacher']);
@@ -54,24 +59,53 @@ export async function GET(request) {
     // Dashboard callers only need the matching number, not full user
     // documents. Search and role-group filters must still affect the count.
     if (searchParams.get('countOnly') === 'true') {
-      const count = await prisma.user.count({ where });
+      // Four dashboards each fire two or three of these on every load, and a
+      // Student/Teacher count only moves when someone is added, removed or
+      // promoted. Cached briefly so a dashboard's parallel calls collapse into
+      // one query. The key carries every filter that shaped `where`, plus the
+      // caller's role and department, so a Department Admin's count can never
+      // be served to a Super Admin.
+      const cacheScope = [
+        'count',
+        auth.user.role,
+        auth.user.departmentId || '-',
+        auth.user.shift || '-',
+        requestedRole || '-',
+        searchParams.get('departmentId') || '-',
+        searchParams.get('shift') || '-',
+        searchParams.get('semester') || '-',
+        searchParams.get('section') || '-',
+        search || '-',
+        searchParams.get('since') || '-',
+      ].join('|');
 
-      // `since=<ISO date>` counts only users created on or after that date, so
-      // the dashboard can show a real "from last month" delta instead of
-      // inventing a percentage. Purely additive: with no `since` the response
-      // is byte-for-byte what it was before.
-      const sinceRaw = searchParams.get('since');
-      if (sinceRaw) {
-        const since = new Date(sinceRaw);
-        if (!Number.isNaN(since.getTime())) {
-          const newCount = await prisma.user.count({
-            where: { ...where, createdAt: { gte: since } },
-          });
-          return NextResponse.json({ success: true, count, total: count, newCount });
+      const { value: counted, cached } = await cacheWrap(
+        cacheKey('users', cacheScope),
+        COUNT_TTL,
+        async () => {
+          const count = await prisma.user.count({ where });
+
+          // `since=<ISO date>` counts only users created on or after that date,
+          // so the dashboard can show a real "from last month" delta instead of
+          // inventing a percentage.
+          const sinceRaw = searchParams.get('since');
+          if (sinceRaw) {
+            const since = new Date(sinceRaw);
+            if (!Number.isNaN(since.getTime())) {
+              const newCount = await prisma.user.count({
+                where: { ...where, createdAt: { gte: since } },
+              });
+              return { count, total: count, newCount };
+            }
+          }
+
+          return { count, total: count };
         }
-      }
+      );
 
-      return NextResponse.json({ success: true, count, total: count });
+      const response = NextResponse.json({ success: true, ...counted });
+      response.headers.set('X-Cache', cached ? 'HIT' : 'MISS');
+      return response;
     }
 
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);

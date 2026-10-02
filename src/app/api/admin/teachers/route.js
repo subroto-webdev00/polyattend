@@ -68,18 +68,38 @@ export async function GET(request) {
         : teacher.departmentId,
     }));
 
-    return NextResponse.json({ success: true, teachers, pendingInvites });
+    // Invites need exactly the same department treatment. They arrive with
+    // `departmentId` as a raw String and the readable name parked in a
+    // separate `department` object, so passing `invite.departmentId` to
+    // formatDepartment() rendered the bare CUID ("c1ee9ffc-8f17-…") on the
+    // Pending Invite card instead of "Computer Science & Technology (85)" —
+    // a string that looks so much like an invite code that it was mistaken
+    // for one, while the actual code went unshown.
+    const pending = pendingInvites.map(invite => ({
+      ...invite,
+      _id: invite.id,
+      departmentId: invite.department
+        ? { ...invite.department, _id: invite.department.id }
+        : invite.departmentId,
+    }));
+
+    return NextResponse.json({ success: true, teachers, pendingInvites: pending });
   } catch (error) { return errorResponse(error); }
 }
 
 // POST /api/admin/teachers
 // Super Admin invites a new Teacher into a Department.
 //
-// Deliberately no Subject / Semester / Group / Shift here. None of those
-// describe a person: a Subject belongs to one Department, Semester, Group
-// and Shift, and every one of them would have to be a placeholder on a
-// "create this person" form that quietly becomes real data. They are all
-// collected through /assign-subject, once the Teacher actually exists.
+// No Subject / Semester / Group here. None of those describe a person: a
+// Subject belongs to one Department, Semester and Group, and every one of them
+// would have to be a placeholder on a "create this person" form that quietly
+// becomes real data. They are all collected through /assign-subject.
+//
+// Shift is the exception. A Teacher teaches in exactly one Shift for the whole
+// of their career, so it is settled once, here, and every Subject assigned to
+// them later inherits it. It used to be optional and default to null, which let
+// a Teacher's first assigned Subject silently decide their shift — so a Subject
+// could be filed against a shift its teacher did not actually teach in.
 export async function POST(request) {
   const auth = await requireAuth(request, ['admin']);
   if (auth.error) return auth.error;
@@ -103,11 +123,10 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Select a Department' }, { status: 400 });
     }
 
-    // Shift is deliberately optional. It is not a property of the person —
-    // it belongs to the Subject they will teach — so it is picked in the
-    // Assign Subject step instead of here. A Teacher invited without one
-    // simply has no shift until their first Subject is assigned.
-    const normalizedShift = VALID_SHIFTS.includes(shift) ? normalizeShift(shift) : null;
+    if (!VALID_SHIFTS.includes(shift)) {
+      return NextResponse.json({ success: false, message: 'Select a Shift' }, { status: 400 });
+    }
+    const normalizedShift = normalizeShift(shift);
 
     // The Department must actually exist, otherwise the new account would be
     // scoped to a departmentId that matches nothing.
@@ -157,6 +176,11 @@ export async function POST(request) {
         codeExpire: oneMonthFromNow(),
       },
     });
+
+    // The invite creates no user row yet, so no dashboard count moves, but the
+    // Teachers page shows the pending invite immediately after this call and
+    // the Class Report count is unrelated. Nothing to invalidate beyond the
+    // teacher count once they register.
 
     const { subject, message, html } = inviteCodeEmail({ name: normalizedName, role: 'teacher', code });
     try {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { hashPassword, errorResponse } from '@/lib/auth';
 import { isStrongPassword } from '@/lib/validatePassword';
+import { cacheDelPrefix } from '@/lib/cache';
 export const dynamic = 'force-dynamic';
 export async function POST(request) {
   try {
@@ -48,6 +49,10 @@ export async function POST(request) {
       await prisma.user.update({ where: { id: user.id }, data: { subjectId: subject.id } });
     }
     await prisma.adminInvite.update({ where: { id: invite.id }, data: { used: true, usedAt: new Date() } });
+    // Redeeming an invite creates a real account, which moves the Teacher /
+    // Department Admin counts on every dashboard and the department's student
+    // roster cache.
+    await Promise.all([cacheDelPrefix('users'), cacheDelPrefix('deptadmin')]);
     return NextResponse.json({ success: true, message: 'Registration successful! You can now log in.' }, { status: 201 });
   } catch (error) { return errorResponse(error); }
 }

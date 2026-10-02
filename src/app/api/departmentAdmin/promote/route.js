@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
+import { cacheDelPrefix } from '@/lib/cache';
 export const dynamic = 'force-dynamic';
 export async function POST(request) {
   const auth = await requireAuth(request, ['departmentAdmin']);
@@ -19,6 +20,11 @@ export async function POST(request) {
     if (!allowedSemesters.includes(Number(currentSemester))) return NextResponse.json({ success: false, message: 'That Semester is outside your scope' }, { status: 403 });
     if (currentSemester >= 8) return NextResponse.json({ success: false, message: 'Cannot promote from Semester 8' }, { status: 400 });
     const result = await prisma.user.updateMany({ where: { id: { in: validStudentIds }, role: 'student', departmentId: auth.user.departmentId, shift: auth.user.shift, semester: currentSemester }, data: { semester: currentSemester + 1 } });
+    // Promotion moves students between the two cached semester rosters and the
+    // semester coverage counters on the Department Admin dashboard.
+    if (result.count) {
+      await Promise.all([cacheDelPrefix('deptadmin'), cacheDelPrefix('users')]);
+    }
     return NextResponse.json({ success: true, message: `${result.count} Student(s) promoted to Semester ${currentSemester + 1}`, promotedCount: result.count });
   } catch (error) { return errorResponse(error); }
 }

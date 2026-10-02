@@ -18,7 +18,7 @@ export async function POST(request) {
     if (!email || !password)
       return NextResponse.json({ success: false, message: 'Please provide email and password' }, { status: 400 });
 
-    const limited = checkRateLimit(request, 'login', email, { limit: 8, windowMs: 15 * 60 * 1000 });
+    const limited = await checkRateLimit(request, 'login', email, { limit: 8, windowMs: 15 * 60 * 1000 });
     if (limited) return NextResponse.json({ success: false, message: limited.message }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } });
 
     const user = await prisma.user.findFirst({
@@ -33,8 +33,8 @@ export async function POST(request) {
     if (REQUIRES_2FA.includes(user.role)) {
       const otp = generateOTP();
       await prisma.user.update({ where: { id: user.id }, data: { loginOTP: otp, loginOTPExpire: new Date(Date.now() + 10 * 60 * 1000) } });
-      const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;"><h2 style="color:#1a6b4a;text-align:center;">🔐 Login Verification</h2><p>Hello <strong>${user.name}</strong>,</p><div style="background:#f0fdf4;border:2px dashed #1a6b4a;border-radius:8px;padding:15px;text-align:center;margin:20px 0;"><span style="font-size:26px;font-weight:bold;color:#1a6b4a;letter-spacing:6px;">${otp}</span></div><p style="color:#64748b;font-size:13px;">Valid for 10 minutes.</p></div>`;
-      await sendEmail({ email: user.email, subject: 'PolyAttend — Login Verification Code', message: `OTP: ${otp}`, html });
+      const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;"><h2 style="color:#1a6b4a;text-align:center;">ðŸ” Login Verification</h2><p>Hello <strong>${user.name}</strong>,</p><div style="background:#f0fdf4;border:2px dashed #1a6b4a;border-radius:8px;padding:15px;text-align:center;margin:20px 0;"><span style="font-size:26px;font-weight:bold;color:#1a6b4a;letter-spacing:6px;">${otp}</span></div><p style="color:#64748b;font-size:13px;">Valid for 10 minutes.</p></div>`;
+      await sendEmail({ email: user.email, subject: 'PolyAttend â€” Login Verification Code', message: `OTP: ${otp}`, html });
       return NextResponse.json({ success: true, requiresOtp: true, email: user.email, message: 'Login OTP sent to your email' });
     }
 

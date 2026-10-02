@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, hashPassword, errorResponse } from '@/lib/auth';
+import { cacheDel, cacheDelPrefix, cacheKey } from '@/lib/cache';
 export const dynamic = 'force-dynamic';
+
+// Any change to a user can move a dashboard count, and an edit can change the
+// shape /auth/me returns (name, shift, department, semesters, active flag).
+// Dropping both is cheaper than reasoning about which dashboard notices which
+// edit, and both have short TTLs anyway.
+async function invalidateUserCaches(id) {
+  await Promise.all([
+    cacheDel(cacheKey('auth', 'me', id)),
+    cacheDelPrefix('users'),
+  ]);
+}
 // Roles a Department Admin is allowed to act on. `admin` is deliberately absent:
 // a Department Admin must never be able to reach a Super Admin account, even
 // just to flip its active flag.
@@ -47,6 +59,7 @@ export async function PUT(request, { params }) {
     }
 
     const user = await prisma.user.update({ where: { id }, data, select: { id: true, name: true, email: true, role: true, isActive: true } });
+    await invalidateUserCaches(id);
     return NextResponse.json({ success: true, user });
   } catch (error) { return errorResponse(error, 400); }
 }
@@ -140,6 +153,7 @@ export async function DELETE(request, { params }) {
       await tx.user.delete({ where: { id: target.id } });
     });
 
+    await invalidateUserCaches(target.id);
     return NextResponse.json({ success: true, message: 'User and related history permanently deleted' });
   } catch (error) {
     // Attendance, sessions, invites, etc. still reference this user. The

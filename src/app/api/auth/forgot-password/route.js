@@ -9,7 +9,7 @@ export async function POST(request) {
   try {
     const { email } = await request.json();
     if (!email) return NextResponse.json({ success: false, message: 'Enter email address' }, { status: 400 });
-    const limited = checkRateLimit(request, 'forgot-password', email, { limit: 5, windowMs: 15 * 60 * 1000 });
+    const limited = await checkRateLimit(request, 'forgot-password', email, { limit: 5, windowMs: 15 * 60 * 1000 });
     if (limited) return NextResponse.json({ success: false, message: limited.message }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } });
     const user = await prisma.user.findFirst({ where: { email: email.toLowerCase() } });
     if (!user || !user.isActive) return NextResponse.json({ success: true, message: GENERIC_MESSAGE });

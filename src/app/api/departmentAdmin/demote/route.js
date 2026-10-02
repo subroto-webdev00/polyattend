@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
+import { cacheDelPrefix } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +118,10 @@ export async function POST(request) {
         demotedCount: result.count,
       }, { status: 409 });
     }
+
+    // Demotion moves students between the two cached semester rosters and the
+    // semester coverage counters on the Department Admin dashboard.
+    await Promise.all([cacheDelPrefix('deptadmin'), cacheDelPrefix('users')]);
 
     return NextResponse.json({
       success: true,

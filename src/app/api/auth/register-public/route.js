@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request) {
   try {
     const { email, password, role, studentId, preApprovalCode, mobile } = await request.json();
-    const limited = checkRateLimit(request, 'register-public', email, { limit: 8, windowMs: 15 * 60 * 1000 });
+    const limited = await checkRateLimit(request, 'register-public', email, { limit: 8, windowMs: 15 * 60 * 1000 });
     if (limited) return NextResponse.json({ success: false, message: limited.message }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } });
     if (role !== 'student') return NextResponse.json({ success: false, message: 'Only Students can register here.' }, { status: 400 });
     if (!email || !password || !role) return NextResponse.json({ success: false, message: 'Enter Email, Password and role' }, { status: 400 });

@@ -8,7 +8,7 @@ export async function POST(request) {
     const { email, otp } = await request.json();
     if (!email || !otp) return NextResponse.json({ success: false, message: 'Enter Email and OTP' }, { status: 400 });
     const normalizedEmail = email.toLowerCase().trim();
-    const limited = checkRateLimit(request, 'verify-login-otp', normalizedEmail, { limit: 6, windowMs: 10 * 60 * 1000 });
+    const limited = await checkRateLimit(request, 'verify-login-otp', normalizedEmail, { limit: 6, windowMs: 10 * 60 * 1000 });
     if (limited) return NextResponse.json({ success: false, message: limited.message }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } });
     const user = await prisma.user.findFirst({ where: { email: normalizedEmail, loginOTP: otp, loginOTPExpire: { gt: new Date() } }, include: { department: { select: { id: true, name: true, code: true } } } });
     if (!user) return NextResponse.json({ success: false, message: 'Wrong OTP or the OTP has expired' }, { status: 400 });

@@ -4,6 +4,7 @@ import sendEmail from '@/lib/sendEmail';
 import { generateInviteCode, oneMonthFromNow } from '@/lib/inviteCode';
 import { requireAuth, errorResponse } from '@/lib/auth';
 import { inviteCodeEmail } from '@/lib/notify';
+import { cacheWrap, cacheDelPrefix, cacheKey } from '@/lib/cache';
 import ExcelJS from 'exceljs';
 export const dynamic = 'force-dynamic';
 const GROUPS = ['A','B','C','D'];
@@ -124,8 +125,22 @@ export async function GET(request) {
       // visible so an admin can reactivate them if needed.
       where.OR = [{ registered: true }, { isActive: true }];
     }
-    const students = await prisma.user.findMany({ where, select: { id: true, name: true, email: true, studentId: true, mobile: true, section: true, semester: true, registered: true, isActive: true, createdAt: true }, orderBy: { createdAt: 'desc' } });
-    return NextResponse.json({ success: true, entries: students.map(toEntry), semester: semesterNum });
+    // This is the call the Department Admin dashboard fires EIGHT times on
+    // load, once per semester, purely to count students. Cached per
+    // (department, shift, semester, roster) so those eight calls collapse into
+    // one query and eight database connections instead.
+    const { value: students, cached } = await cacheWrap(
+      cacheKey('deptadmin', 'students', auth.user.departmentId || '-', auth.user.shift || '-', semesterNum, promotionRoster ? 'roster' : 'all'),
+      20,
+      () => prisma.user.findMany({
+        where,
+        select: { id: true, name: true, email: true, studentId: true, mobile: true, section: true, semester: true, registered: true, isActive: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      })
+    );
+    const response = NextResponse.json({ success: true, entries: students.map(toEntry), semester: semesterNum });
+    response.headers.set('X-Cache', cached ? 'HIT' : 'MISS');
+    return response;
   } catch (error) { return errorResponse(error); }
 }
 export async function POST(request) {
@@ -166,6 +181,10 @@ export async function POST(request) {
       if (!results.length) {
         return NextResponse.json({ success: false, message: 'No student rows found. Use a header row (Name, Roll, Email, Group) then one student per row.' }, { status: 400 });
       }
+      // An upload can touch several semesters at once, so the whole
+      // department-admin student namespace is dropped rather than guessing
+      // which semesters changed.
+      if (added.length) await cacheDelPrefix('deptadmin');
       return NextResponse.json({
         success: true,
         added,
@@ -180,6 +199,7 @@ export async function POST(request) {
     const scope = { departmentId: auth.user.departmentId, shift: auth.user.shift, semester: semesterNum };
     const result = await addOneEntry({ name, roll, email, section, scope, invitedBy: auth.user.id });
     if (!result.ok) return NextResponse.json({ success: false, message: result.reason }, { status: 400 });
+    await cacheDelPrefix('deptadmin');
     return NextResponse.json({ success: true, entry: result.entry }, { status: 201 });
   } catch (error) { return errorResponse(error); }
 }
