@@ -10,7 +10,7 @@ const navItems = [
   { label: 'Semester Promotion', icon: 'chevronRight', path: '/departmentAdmin/promotion' },
   { label: 'Users', icon: 'users', path: '/departmentAdmin/users' },
   { section: 'Monitoring' },
-  { label: 'Missed Classes Report', icon: 'clock', path: '/departmentAdmin/missed-classes' },
+  { label: 'Class Report', icon: 'clock', path: '/departmentAdmin/missed-classes' },
   { section: 'Analytics' },
   { label: 'Reports', icon: 'chart', path: '/departmentAdmin/reports' },
   { section: 'Tools' },
