@@ -7,9 +7,9 @@ export default function ToasterClient() {
       position="top-center"
       toastOptions={{
         duration: 3500,
-        style: { borderRadius: '12px', background: '#0D2419', color: '#EAF5EF', border: '1px solid #27523C', boxShadow: '0 8px 24px rgba(0,0,0,0.45)' },
-        success: { iconTheme: { primary: '#22c55e', secondary: '#0D2419' } },
-        error: { iconTheme: { primary: '#f43f5e', secondary: '#0D2419' } },
+        style: { borderRadius: '12px', background: '#ffffff', color: '#0f172a', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(15,23,42,0.12)' },
+        success: { iconTheme: { primary: '#10b981', secondary: '#ffffff' } },
+        error: { iconTheme: { primary: '#ef4444', secondary: '#ffffff' } },
       }}
     />
   );

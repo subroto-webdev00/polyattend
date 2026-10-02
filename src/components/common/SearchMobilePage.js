@@ -123,7 +123,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
         .smb-btn:not(:disabled):hover { opacity: 0.88; transform: scale(1.03); }
         .smb-error {
           background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.25);
-          border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #f87171; margin-top: 8px;
+          border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #dc2626; margin-top: 8px;
         }
         .smb-result {
           margin-top: 18px; background: var(--bg2); border: 1.5px solid var(--border);
@@ -139,7 +139,7 @@ export default function SearchMobilePage({ canStaffSearch = false }) {
         .smb-meta { font-size: 12px; color: var(--txt2); }
         .smb-mobile-box { margin-left: auto; text-align: right; flex-shrink: 0; }
         .smb-mobile-label { font-size: 11px; color: var(--txt3); margin-bottom: 2px; }
-        .smb-mobile-number { font-size: 17px; font-weight: 800; color: #34d399; letter-spacing: 0.5px; font-family: monospace; }
+        .smb-mobile-number { font-size: 17px; font-weight: 800; color: #047857; letter-spacing: 0.5px; font-family: monospace; }
         .smb-mobile-empty { font-size: 13px; color: var(--txt3); }
         .smb-hint {
           display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border);

@@ -55,6 +55,22 @@ export async function GET(request) {
     // documents. Search and role-group filters must still affect the count.
     if (searchParams.get('countOnly') === 'true') {
       const count = await prisma.user.count({ where });
+
+      // `since=<ISO date>` counts only users created on or after that date, so
+      // the dashboard can show a real "from last month" delta instead of
+      // inventing a percentage. Purely additive: with no `since` the response
+      // is byte-for-byte what it was before.
+      const sinceRaw = searchParams.get('since');
+      if (sinceRaw) {
+        const since = new Date(sinceRaw);
+        if (!Number.isNaN(since.getTime())) {
+          const newCount = await prisma.user.count({
+            where: { ...where, createdAt: { gte: since } },
+          });
+          return NextResponse.json({ success: true, count, total: count, newCount });
+        }
+      }
+
       return NextResponse.json({ success: true, count, total: count });
     }
 

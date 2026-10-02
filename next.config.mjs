@@ -4,6 +4,16 @@ import withSerwistInit from '@serwist/next';
 const nextConfig = {
   serverExternalPackages: ['@prisma/client'],
 
+  // Build memory ceiling. "Collecting page data" spawns one worker per CPU,
+  // and on a machine with a few GB free that fan-out is what gets the whole
+  // build OOM-killed part-way through (it dies after "Compiled successfully",
+  // silently, with no error). Capping to 2 workers trades a little build
+  // time for a build that actually finishes. Raise it on a roomier machine.
+  experimental: {
+    cpus: 2,
+    workerThreads: false,
+  },
+
   // The middle role was renamed from "Semester Admin" to "Department Admin"
   // and its routes moved with it. Anyone holding an old bookmark — or a link
   // from an old email or chat — should land on the new page instead of a 404.
@@ -75,8 +85,15 @@ const nextConfig = {
 const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.js',
   swDest: 'public/sw.js',
+  // `disable` is set in dev, but the real hazard was the opposite direction: a
+  // production build leaves an already-registered worker in the browser, and it
+  // then keeps serving stale JS/CSS to `pnpm dev` after the source changes.
+  // Bumping the cache name on every build makes a previously-installed worker
+  // stop matching immediately instead of pinning the old assets for days.
   register: true,
   disable: process.env.NODE_ENV === 'development',
+  cacheOnNavigation: true,
+  reloadOnOnline: false,
 });
 
 export default withSerwist(nextConfig);

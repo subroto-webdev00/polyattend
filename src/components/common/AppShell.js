@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { blockIfSessionActive } from '@/utils/sessionGuard';
-import { getGreetingText } from '@/lib/display';
 import Icon from './Icon';
 import Modal from './Modal';
 
@@ -70,6 +69,8 @@ export default function AppShell({ navItems, children }) {
   };
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
+  // The top bar shows a single letter; the sidebar footer keeps the full pair.
+  const userInitial = (user?.name?.trim()?.[0] || '?').toUpperCase();
 
   return (
     <div className={`shell-root${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
@@ -115,14 +116,14 @@ export default function AppShell({ navItems, children }) {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, borderRadius: 10,
-                background: 'rgba(248,113,113,0.12)',
-                border: '1.5px solid rgba(248,113,113,0.28)',
-                color: '#f87171', cursor: 'pointer',
+                background: 'rgba(239,68,68,0.12)',
+                border: '1.5px solid rgba(239,68,68,0.28)',
+                color: '#dc2626', cursor: 'pointer',
                 transition: 'all 0.18s',
                 flexShrink: 0,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background='rgba(248,113,113,0.25)'; e.currentTarget.style.transform='scale(1.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background='rgba(248,113,113,0.12)'; e.currentTarget.style.transform='scale(1)'; }}
+              onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.25)'; e.currentTarget.style.transform='scale(1.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background='rgba(239,68,68,0.12)'; e.currentTarget.style.transform='scale(1)'; }}
             >
               <Icon name="logout" size={16} />
             </button>
@@ -134,42 +135,56 @@ export default function AppShell({ navItems, children }) {
 
       {/* MAIN */}
       <div className="shell-main">
-        {/* TOP NAV — greeting + global search. Visible on mobile AND desktop. */}
+        {/* TOP NAV — reference layout: burger + wide search on the left, then
+            the notification bell and the signed-in user block on the right.
+            The greeting used to live here; it now heads the dashboard page
+            itself, so the bar stays a clean utility strip. */}
         <header className="top-nav">
           <button
-            className="menu-btn"
+            className="menu-btn top-nav-burger-mobile"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
           >
-            <Icon name="menu" size={22} />
+            <Icon name="menu" size={20} />
           </button>
 
-          <div className="top-nav-greeting">
-            <div className="top-nav-greeting-main">
-              <span className="top-nav-greeting-text">
-                {getGreetingText()}, {displayRole}
-              </span>
-              <span className="top-nav-greeting-sub">Let&apos;s make today&apos;s attendance tracking smooth</span>
-            </div>
-          </div>
+          {searchPath && (
+            <form className="top-nav-search" onSubmit={handleSearch} role="search">
+              <span className="top-nav-search-icon"><Icon name="search" size={16} /></span>
+              <input
+                type="search"
+                className="top-nav-search-input"
+                placeholder="Search students, teachers, subjects..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search"
+              />
+            </form>
+          )}
 
           <div className="top-nav-right">
-            {searchPath && (
-              <form className="top-nav-search" onSubmit={handleSearch} role="search">
-                <span className="top-nav-search-icon"><Icon name="search" size={15} /></span>
-                <input
-                  type="search"
-                  className="top-nav-search-input"
-                  placeholder={user?.role === 'student' ? 'Search by roll…' : 'Search by name…'}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  aria-label="Search profile"
-                />
-              </form>
-            )}
-            <span className={`top-nav-role tag ${user?.role === 'teacher' ? 'tag-green' : user?.role === 'admin' ? 'tag-blue' : 'tag-amber'}`} style={{ fontSize: 10, textTransform: 'capitalize' }}>
-              {displayRole}
-            </span>
+            <button
+              className="menu-btn top-nav-bell"
+              onClick={() => router.push(navItems.find((n) => /holiday/i.test(n.label || ''))?.path || '/admin')}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Icon name="bell" size={19} />
+            </button>
+
+            <button
+              className="top-nav-user"
+              onClick={() => setShowLogoutConfirm(true)}
+              title="Account"
+            >
+              <span className="top-nav-avatar">{userInitial}</span>
+              <span className="top-nav-user-text">
+                <span className="top-nav-user-name">{user?.name || displayRole}</span>
+                <span className="top-nav-user-role">{displayRole}</span>
+              </span>
+              <Icon name="chevronDown" size={15} className="top-nav-user-chevron" />
+            </button>
+
             {/* Desktop hamburger: folds the sidebar away to free the width */}
             <button
               className="menu-btn top-nav-burger-desktop"
@@ -178,7 +193,7 @@ export default function AppShell({ navItems, children }) {
               aria-expanded={!sidebarCollapsed}
               title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
             >
-              <Icon name="menu" size={22} />
+              <Icon name="menu" size={20} />
             </button>
           </div>
         </header>
@@ -204,7 +219,7 @@ export default function AppShell({ navItems, children }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10, padding: '4px 0 8px' }}>
           <div style={{
             width: 52, height: 52, borderRadius: '50%',
-            background: 'rgba(248, 113, 113, 0.14)', color: '#f87171',
+            background: 'rgba(239, 68, 68, 0.14)', color: '#dc2626',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Icon name="logout" size={24} />

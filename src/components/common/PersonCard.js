@@ -23,11 +23,15 @@ import { formatShift } from '@/lib/display';
 //     competing with "Deactivate" and "Delete" on equal footing.
 //   onClick: optional — makes the whole card clickable (e.g. open detail/edit)
 
+// `color` is decorative only — the avatar gradient, the left border stripe and
+// the hover shadow. `text` is the same hue a step darker, because the role
+// chip paints that colour as the label itself; the 400-weight shades this
+// palette used to carry sat at ~1.9:1 on a white card and were unreadable.
 const ROLE_META = {
-  admin: { label: 'Admin', tag: 'tag-blue', color: '#60a5fa' },
-  departmentAdmin: { label: 'Department Admin', tag: 'tag-blue', color: '#38bdf8' },
-  teacher: { label: 'Teacher', tag: 'tag-green', color: '#34d399' },
-  student: { label: 'Student', tag: 'tag-amber', color: '#fbbf24' },
+  admin: { label: 'Admin', tag: 'tag-blue', color: '#3b82f6', text: '#1d4ed8' },
+  departmentAdmin: { label: 'Department Admin', tag: 'tag-blue', color: '#0ea5e9', text: '#0369a1' },
+  teacher: { label: 'Teacher', tag: 'tag-green', color: '#10b981', text: '#047857' },
+  student: { label: 'Student', tag: 'tag-amber', color: '#f59e0b', text: '#b45309' },
 };
 
 // A card is a glance, not a table. Past this many Subjects the rest collapse
@@ -171,15 +175,15 @@ function actionStyle(variant, disabled) {
     return {
       background: 'linear-gradient(135deg, var(--primary-mid), var(--primary))',
       color: '#fff',
-      border: '1px solid rgba(34, 197, 94, 0.5)',
-      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.32)',
+      border: '1px solid rgba(37, 99, 235, 0.5)',
+      boxShadow: '0 2px 8px rgba(37, 99, 235, 0.32)',
     };
   }
   if (variant === 'danger') {
     return {
       background: 'var(--danger-light)',
-      color: '#f87171',
-      border: '1px solid rgba(244, 63, 94, 0.3)',
+      color: '#dc2626',
+      border: '1px solid rgba(239, 68, 68, 0.3)',
     };
   }
   return {
@@ -190,7 +194,7 @@ function actionStyle(variant, disabled) {
 }
 
 export default function PersonCard({ person, subtitleFields, actions = [], onClick }) {
-  const meta = ROLE_META[person.role] || { label: person.role || 'Unknown', tag: 'tag-blue', color: '#94a3b8' };
+  const meta = ROLE_META[person.role] || { label: person.role || 'Unknown', tag: 'tag-blue', color: '#94a3b8', text: '#64748b' };
   const fields = subtitleFields || metaForRole(person);
   const [hov, setHov] = React.useState(false);
   const [actionHover, setActionHover] = React.useState(null);
@@ -238,8 +242,8 @@ export default function PersonCard({ person, subtitleFields, actions = [], onCli
           title={person.isActive === false ? 'Inactive' : 'Active'}
           style={{
             width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-            background: person.isActive === false ? '#f87171' : '#34d399',
-            boxShadow: person.isActive === false ? '0 0 0 3px rgba(248, 113, 113, 0.18)' : '0 0 0 3px rgba(52, 211, 153, 0.18)',
+            background: person.isActive === false ? '#ef4444' : '#10b981',
+            boxShadow: person.isActive === false ? '0 0 0 3px rgba(239, 68, 68, 0.18)' : '0 0 0 3px rgba(16, 185, 129, 0.18)',
           }}
         />
       </div>
@@ -248,9 +252,9 @@ export default function PersonCard({ person, subtitleFields, actions = [], onCli
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
-          background: meta.color + '24', color: meta.color,
+          background: meta.color + '24', color: meta.text,
           fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 20,
-          border: `1px solid ${meta.color}30`, letterSpacing: '0.02em',
+          border: `1px solid ${meta.text}30`, letterSpacing: '0.02em',
         }}>
           {meta.label}
         </span>

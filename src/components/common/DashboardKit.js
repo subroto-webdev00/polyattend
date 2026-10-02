@@ -4,199 +4,659 @@ import { motion } from 'framer-motion';
 import Icon from './Icon';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
-// Shared building blocks for every role's Dashboard (home) page — Super
-// Admin and Department Admin - so they both visually match Teacher
-// Dashboard exactly (same dark palette, same hero/blob treatment, same
-// StatCard, same motion timing) without each page re-implementing it.
+// Shared building blocks for every role's Dashboard (home) page. One light
+// surface language across Super Admin, Department Admin, Teacher and Student so
+// the four dashboards read as the same product.
+//
+// Layout convention throughout, matching the reference design: a pale slate
+// canvas, pure-white cards with a hairline border, a blue accent, and generous
+// 24px gutters between panels.
+
 export const ACCENTS = {
-  indigo: { text: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', top: 'from-indigo-500' },
-  blue: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', top: 'from-blue-500' },
-  emerald: { text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', top: 'from-emerald-500' },
-  amber: { text: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', top: 'from-amber-500' },
-  purple: { text: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', top: 'from-purple-500' },
-  rose: { text: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', top: 'from-rose-500' },
+  blue: { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', solid: 'bg-blue-600', soft: 'text-blue-50' },
+  purple: { text: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', solid: 'bg-purple-600', soft: 'text-purple-50' },
+  emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', solid: 'bg-emerald-600', soft: 'text-emerald-50' },
+  amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', solid: 'bg-amber-600', soft: 'text-amber-50' },
+  rose: { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', solid: 'bg-rose-600', soft: 'text-rose-50' },
+  indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200', solid: 'bg-indigo-600', soft: 'text-indigo-50' },
+  cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200', solid: 'bg-cyan-600', soft: 'text-cyan-50' },
+  teal: { text: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200', solid: 'bg-teal-600', soft: 'text-teal-50' },
 };
 
-// Full-page loading state — identical to Teacher Dashboard's.
+// `overflow-hidden` is baked in here rather than added per-component: the stat
+// cards and subject cards both place a decorative watermark, and anything that
+// escapes a rounded corner looks like a rendering bug.
+const CARD = 'bg-white rounded-2xl border border-slate-200/90 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden';
+
+// ── Page shell ────────────────────────────────────────────────────────────
 export function DashboardLoading() {
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 bg-transparent">
-      <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-2 border-[#1C3A2B]" />
-        <div className="absolute inset-0 rounded-full border-2 border-t-indigo-400 animate-spin" />
+    <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4">
+      <div className="relative w-11 h-11">
+        <div className="absolute inset-0 rounded-full border-[3px] border-slate-200" />
+        <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-blue-600 animate-spin" />
       </div>
       <p className="text-sm text-slate-500">Loading...</p>
     </div>
   );
 }
 
-// Outer page wrapper — full-width + vertical rhythm.
-// `max-w-7xl mx-auto` was removed: it capped the content at 1280px AND
-// centred it, which left a large dead gap between the sidebar and the first
-// card on a desktop monitor. Now the dashboard fills the content column and
-// starts flush beside the sidebar, matching the `.page` wrapper.
 export function DashboardPage({ children }) {
   return (
-    <div className="min-h-screen bg-transparent text-slate-200 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="space-y-8">{children}</div>
+    <div className="px-5 sm:px-7 py-6">
+      <div className="space-y-5 max-w-[1600px]">{children}</div>
     </div>
   );
 }
 
-// Hero card — avatar, name, subtitle line, optional scope chips
-// (department/shift/semester), plus the animated gradient-blob accent.
-// `badges` is an array of short strings shown as pill chips under the name
-// (e.g. department name, shift, semester) — used by Semester
-// Admin to show their scope, which Teacher's hero doesn't need.
-// The old `greeting` prop was dropped: the top bar now shows the greeting
-// on every page, so repeating it inside the hero was a duplicate.
-export function DashboardHero({ name, subtitle, subtitleColor = 'text-slate-400', badges, rightSlot }) {
-  const initial = (name || '?').trim().charAt(0).toUpperCase();
+// ── Header: greeting on the left, date + time on the right ────────────────
+// `chips` renders the signed-in person's own scope (department, shift,
+// semester, …) directly under the subtitle, so they never have to open a
+// profile page to confirm which department or shift they are looking at.
+export function DashboardHeader({ greeting, subtitle, name, now, chips = [] }) {
+  const visible = chips.filter(Boolean);
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="relative overflow-hidden rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-6 sm:p-8"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-20 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #6366F1 0%, transparent 70%)' }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-24 -left-16 w-64 h-64 rounded-full opacity-10 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #10B981 0%, transparent 70%)' }}
-      />
-
-      <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-semibold text-white shrink-0 shadow-lg shadow-indigo-950/40">
-            {initial}
+    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-[26px] sm:text-[30px] font-extrabold text-slate-900 tracking-tight leading-tight">
+          {greeting}{name ? `, ${name}` : ''} <span aria-hidden>👋</span>
+        </h1>
+        {subtitle && <p className="text-[13.5px] text-slate-500 mt-1">{subtitle}</p>}
+        {visible.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap mt-2.5">
+            {visible.map((chip, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-600"
+              >
+                {chip.icon && <Icon name={chip.icon} size={13} className="text-slate-400 shrink-0" />}
+                <span className="text-slate-400 font-medium">{chip.label}</span>
+                <span className="text-slate-800">{chip.value}</span>
+              </span>
+            ))}
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">{name}</h1>
-            {subtitle && <p className={`text-sm ${subtitleColor} mt-1 font-medium`}>{subtitle}</p>}
-            {badges && badges.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {badges.map((b, i) => (
-                  <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.05] border border-[#303747] text-slate-300">
-                    {b}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        {rightSlot}
+        )}
       </div>
-    </motion.div>
-  );
-}
-
-// Right-hand date/time block, as used in the hero on the right side.
-export function DashboardClock({ now }) {
-  const dateStr = now.toLocaleDateString('en-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' });
-  return (
-    <div className="relative text-left sm:text-right shrink-0">
-      <p className="text-sm text-slate-400">{dateStr}</p>
-      <p className="text-lg font-semibold text-white tabular-nums">{timeStr}</p>
+      {now && <DateTimeBlock now={now} />}
     </div>
   );
 }
 
-export function StatCard({ icon, label, value, accent, index = 0 }) {
-  const a = ACCENTS[accent] || ACCENTS.indigo;
+// The calendar-icon + date line with the clock underneath, as on the reference.
+export function DateTimeBlock({ now }) {
+  const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return (
-    <motion.div
+    <div className="shrink-0 lg:text-right">
+      <div className="flex items-center gap-2 justify-start lg:justify-end">
+        <Icon name="calendar" size={15} className="text-slate-400 shrink-0" />
+        <span className="text-[13px] text-slate-500 font-medium">{date}</span>
+      </div>
+      <div className="text-[22px] font-bold text-slate-900 tabular-nums mt-0.5">{time}</div>
+    </div>
+  );
+}
+
+// ── Stat card ─────────────────────────────────────────────────────────────
+// Icon tile + title on the first row, a "…" affordance on the right, the big
+// number, an optional trend line, and a large faded glyph bleeding off the
+// bottom-right corner — the exact composition of the reference stat tiles.
+export function StatCard({
+  icon, label, value, accent = 'blue', trend, trendLabel,
+  illustration, index = 0, onClick,
+}) {
+  const a = ACCENTS[accent] || ACCENTS.blue;
+  const Wrapper = onClick ? motion.button : motion.div;
+  return (
+    <Wrapper
+      type={onClick ? 'button' : undefined}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      whileHover={{ y: -2 }}
-      className="relative overflow-hidden rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-4 sm:p-5"
+      whileHover={onClick ? { y: -3 } : undefined}
+      onClick={onClick}
+      className={`${CARD} relative overflow-hidden p-4 text-left w-full
+        ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
     >
-      <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${a.top} to-transparent`} />
-      <div className={`w-9 h-9 rounded-lg ${a.bg} flex items-center justify-center mb-3`}>
-        <Icon name={icon} size={16} className={a.text} />
+      <div className="flex items-center gap-2.5">
+        <span className={`w-9 h-9 rounded-lg ${a.bg} ${a.text} grid place-items-center shrink-0`}>
+          <Icon name={icon} size={17} />
+        </span>
+        <span className="text-[14px] font-bold text-slate-800 truncate">{label}</span>
+        <span className="ml-auto text-slate-300 shrink-0" aria-hidden>
+          <Icon name="more" size={15} />
+        </span>
       </div>
-      <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">{value}</div>
-      <div className="text-xs text-slate-500 mt-1">{label}</div>
-    </motion.div>
+
+      <div className="mt-2.5 text-[26px] font-extrabold text-slate-900 tracking-tight leading-none tabular-nums">
+        {value}
+      </div>
+
+      {trend != null && (
+        <div className="mt-2 flex items-center gap-2 text-[12px]">
+          <span className={`font-bold ${trend >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+          </span>
+          {trendLabel && <span className="text-slate-400">{trendLabel}</span>}
+        </div>
+      )}
+
+      {/* Watermark illustration. Deliberately positioned with POSITIVE insets so
+          it sits wholly inside the card. The earlier negative offsets
+          (-bottom-2 / -right-2) pushed it past the card edge, and only looked
+          right because `overflow-hidden` happened to be clipping it. */}
+      {illustration && (
+        <div
+          className={`absolute bottom-3 right-3 ${a.soft} opacity-70 pointer-events-none select-none`}
+          aria-hidden
+        >
+          {illustration}
+        </div>
+      )}
+    </Wrapper>
   );
 }
 
-export function StatGrid({ children }) {
-  return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
-}
-
-export function SectionHeader({ title, action }) {
+// Big faded glyph used as a stat-card illustration. Kept small on purpose: at
+// the original 78px it bled past the card edge and read as a second, competing
+// icon rather than a watermark.
+export function CardGlyph({ name, size = 52 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">{title}</h2>
-      {action}
-    </div>
+    <span className="block" style={{ width: size, height: size }}>
+      <Icon name={name} size={size} />
+    </span>
   );
 }
 
-export function SubjectOverview({ subjects = [], title = 'Assigned Subjects', limit = 12 }) {
-  const visible = subjects.slice(0, limit);
-  if (visible.length === 0) return null;
-
+// A progress ring, used where the reference shows a donut (e.g. Attendance).
+export function ProgressRing({ percent = 0, size = 54, stroke = 8, color = '#10b981', track = '#d1fae5' }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, percent));
   return (
-    <section>
-      <SectionHeader title={`${title} (${subjects.length})`} />
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {visible.map((subject, index) => (
-          <motion.div
-            key={subject._id || subject.id || `${subject.name}-${index}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.2) }}
-            className="rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                <Icon name="book" size={16} className="text-amber-300" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{formatSubject(subject)}</p>
-                <p className="text-xs text-slate-500 mt-0.5 truncate">
-                  {formatDepartment(subject.departmentId, subject.departmentCode) || 'Department unavailable'}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <span className="rounded-full bg-emerald-500/10 text-emerald-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">Sem {subject.semester}</span>
-              <span className="rounded-full bg-blue-500/10 text-blue-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">Group {subject.section}</span>
-              {subject.shift ? <span className="rounded-full bg-purple-500/10 text-purple-300 border border-[#303747] px-2.5 py-1 text-[10px] font-semibold">{formatShift(subject.shift)} Shift</span> : null}
-            </div>
-            {subject.teacherId?.name ? (
-              <p className="text-xs text-slate-500 mt-3">Teacher: {subject.teacherId.name}</p>
-            ) : null}
-          </motion.div>
-        ))}
-      </div>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={c} strokeDashoffset={c - (c * pct) / 100}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset .6s ease' }}
+      />
+    </svg>
+  );
+}
+
+export function StatGrid({ children, cols = 4 }) {
+  const cls = cols === 3 ? 'grid grid-cols-1 sm:grid-cols-3 gap-4'
+    : cols === 2 ? 'grid grid-cols-1 sm:grid-cols-2 gap-4'
+      : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4';
+  return <div className={cls}>{children}</div>;
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────────
+export function Panel({ title, icon, iconAccent = 'blue', subtitle, action, children, className = '', bodyClassName = 'px-5 pb-5' }) {
+  return (
+    <section className={`${CARD} overflow-hidden ${className}`}>
+      {(title || action) && (
+        <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-[15px] font-extrabold text-slate-800">
+              {icon && (
+                <span className={`w-7 h-7 rounded-lg ${(ACCENTS[iconAccent] || ACCENTS.blue).bg} ${(ACCENTS[iconAccent] || ACCENTS.blue).text} grid place-items-center shrink-0`}>
+                  <Icon name={icon} size={15} />
+                </span>
+              )}
+              {title}
+            </h2>
+            {subtitle && <p className="text-[12.5px] text-slate-500 mt-1 ml-9">{subtitle}</p>}
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
+        </div>
+      )}
+      <div className={bodyClassName}>{children}</div>
     </section>
   );
 }
 
-export function EmptyState({ icon = 'users', text }) {
+export function ViewAll({ children = 'View All', onClick }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#27523C] bg-[#0D2419]/60 p-10 flex flex-col items-center justify-center text-center">
-      <div className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center mb-3">
-        <Icon name={icon} size={20} className="text-slate-500" />
-      </div>
-      <p className="text-sm text-slate-500 max-w-sm">{text}</p>
+    <button type="button" onClick={onClick}
+      className="text-[12.5px] font-bold text-blue-600 hover:text-blue-700 transition-colors inline-flex items-center gap-1">
+      {children} <Icon name="chevronRight" size={13} />
+    </button>
+  );
+}
+
+// A small "Last 7 days" style dropdown control.
+export function RangeSelect({ value = 'Last 7 days', options = ['Last 7 days', 'Last 30 days', 'This semester'], onChange }) {
+  return (
+    <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white pl-3 pr-2 py-1.5 cursor-pointer hover:border-slate-300 transition-colors">
+      <select
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        className="text-[12.5px] font-semibold text-slate-600 bg-transparent outline-none cursor-pointer"
+      >
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <Icon name="chevronDown" size={13} className="text-slate-400 pointer-events-none" />
+    </label>
+  );
+}
+
+// ── Area chart (hand-rolled SVG — no chart dependency) ─────────────────────
+// Smooth line, gradient fill under it, horizontal gridlines with y labels,
+// x labels beneath, and a hover crosshair + tooltip.
+//
+// The viewBox is built from the container's ACTUAL measured width rather than a
+// fixed number with preserveAspectRatio="none". Forcing a non-uniform scale is
+// what squashed the y-axis labels ("100%" rendered as "00%") and flattened the
+// point circles into ellipses on any panel whose width didn't match the assumed
+// 640px. Measuring keeps 1 SVG unit equal to 1 CSS pixel, so text and circles
+// stay round at every width.
+export function AreaChart({ data, height = 210, unit = '%' }) {
+  const [hover, setHover] = React.useState(null);
+  const wrapRef = React.useRef(null);
+  const [width, setWidth] = React.useState(640);
+  // Unique per instance: two charts on one page would otherwise share a
+  // gradient id and the second would silently paint with the first's fill.
+  // Declared with the other hooks, above the `if (!data) return null` guard.
+  const gradId = React.useId().replace(/:/g, '');
+
+  React.useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w > 0) setWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // The y-domain follows the DATA, not a fixed 60-100 band. A hard-coded
+  // domain silently pushed any real value outside it off the bottom of the
+  // plot area: with 0% attendance the whole line rendered below the axis and
+  // the chart looked empty. It is now padded around whatever is actually
+  // there, with the floor kept at 0 so a percentage can never imply more
+  // than 100.
+  const [yMin, yMax] = React.useMemo(() => {
+    const vals = (data || []).map((d) => d.value).filter((v) => v != null);
+    if (vals.length === 0) return [0, 100];
+    const lo = Math.min(...vals);
+    const hi = Math.max(...vals);
+    if (lo === hi) {
+      // A flat series still deserves a readable band around the value.
+      const pad = Math.max(10, Math.round(hi * 0.2));
+      return [Math.max(0, Math.round(lo - pad)), Math.min(100, Math.round(hi + pad))];
+    }
+    const pad = Math.max(5, Math.ceil((hi - lo) * 0.25));
+    return [Math.max(0, Math.floor((lo - pad) / 5) * 5), Math.min(100, Math.ceil((hi + pad) / 5) * 5)];
+  }, [data]);
+
+  const H = height;
+  // Below this width there is no room for a readable axis label.
+  const compact = width < 380;
+  const padL = compact ? 34 : 42;
+  const padR = compact ? 8 : 14;
+  const padT = 12;
+  const padB = compact ? 22 : 26;
+  const W = Math.max(width, 260);
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
+  if (!data || data.length === 0) return null;
+
+  const x = (i) => padL + (data.length === 1 ? innerW / 2 : (i * innerW) / (data.length - 1));
+  const y = (v) => padT + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
+
+  // Catmull-Rom → cubic bezier, so the line curves through every point the way
+  // the reference does instead of showing hard corners.
+  const line = (() => {
+    const pts = data.map((d, i) => [x(i), y(d.value)]);
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] || p2;
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2[0]} ${p2[1]}`;
+    }
+    return d;
+  })();
+
+  const area = line
+    ? `${line} L ${x(data.length - 1)} ${padT + innerH} L ${x(0)} ${padT + innerH} Z`
+    : '';
+
+  // Four or five gridlines, always stepping on a round 5/10 boundary.
+  const ticks = (() => {
+    const span = yMax - yMin;
+    if (span <= 0) return [yMin];
+    const step = span > 60 ? 20 : span > 30 ? 10 : span > 12 ? 5 : 2;
+    const out = [];
+    for (let v = yMin; v <= yMax + 0.001; v += step) out.push(Math.round(v * 10) / 10);
+    if (out[out.length - 1] !== yMax) out.push(yMax);
+    return out;
+  })();
+
+  const hp = hover != null ? data[hover] : null;
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width={W}
+        height={H}
+        style={{ width: '100%', height }}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {ticks.map(v => (
+          <g key={v}>
+            <line x1={padL} y1={y(v)} x2={W - padR} y2={y(v)} stroke="#e8edf5" strokeWidth="1" />
+            <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="10.5" fill="#94a3b8">{v}%</text>
+          </g>
+        ))}
+
+        {area && <path d={area} fill={`url(#${gradId})`} />}
+        {line && <path d={line} fill="none" stroke="#2563eb" strokeWidth="2.4" strokeLinecap="round" />}
+
+        {hp && <line x1={x(hover)} y1={padT} x2={x(hover)} y2={padT + innerH} stroke="#2563eb" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />}
+
+        {data.map((d, i) => (
+          <circle key={d.label + i} cx={x(i)} cy={y(d.value)} r={hover === i ? 5 : 3.6}
+            fill="#ffffff" stroke="#2563eb" strokeWidth="2.4" />
+        ))}
+
+        {data.map((d, i) => (
+          <text key={'t' + i} x={x(i)} y={H - 7} textAnchor="middle" fontSize="10.5" fill="#94a3b8">{d.label}</text>
+        ))}
+
+        {/* Invisible hit columns drive the hover state. */}
+        {data.map((_, i) => (
+          <rect
+            key={'h' + i}
+            x={x(i) - innerW / (data.length * 2 || 1)}
+            y={padT}
+            width={innerW / (data.length || 1)}
+            height={innerH}
+            fill="transparent"
+            onMouseEnter={() => setHover(i)}
+          />
+        ))}
+      </svg>
+
+      {hp && (
+        <div
+          className="pointer-events-none absolute z-10"
+          style={{
+            // Clamped so the tooltip never spills past the panel at either end
+            // of the series.
+            left: Math.min(Math.max(x(hover), 52), W - 52),
+            top: Math.max(y(hp.value) - 10, 40),
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <div className="relative bg-slate-900 text-white rounded-lg px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap shadow-lg">
+            <div className="text-slate-300">{hp.label}</div>
+            <div className="tabular-nums">{hp.value}{unit}</div>
+            {/* caret pointing down at the hovered point */}
+            <span className="absolute left-1/2 -bottom-[5px] -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-slate-900" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// "Search by Roll" — a quick single-student lookup box for the
-// Dashboard (home) page. Types a Roll, hits /api/users/lookup-by-roll
-// (already scoped server-side to whichever admin is asking), and shows
-// the student's Mobile Number + basic info inline.
+// ── Today's classes list ──────────────────────────────────────────────────
+const TIME_ACCENTS = ['blue', 'purple', 'amber', 'teal', 'rose', 'indigo'];
+
+export function ClassRow({ time, title, subtitle, status, statusLabel, index = 0, onClick }) {
+  const a = ACCENTS[TIME_ACCENTS[index % TIME_ACCENTS.length]] || ACCENTS.blue;
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.25) }}
+      onClick={onClick}
+      className={`flex items-center gap-3 py-2.5 ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      {time && (
+        <span className={`shrink-0 w-[74px] text-center text-[11.5px] font-bold px-2 py-1.5 rounded-lg ${a.bg} ${a.text}`}>
+          {time}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="text-[13.5px] font-bold text-slate-800 truncate">{title}</div>
+        {subtitle && <div className="text-[11.5px] text-slate-500 truncate">{subtitle}</div>}
+      </div>
+      {status && <StatusPill status={status} label={statusLabel} />}
+    </motion.div>
+  );
+}
+
+const STATUS_STYLE = {
+  ongoing: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  upcoming: 'bg-blue-50 text-blue-700 border border-blue-200',
+  done: 'bg-slate-100 text-slate-600 border border-slate-200',
+  active: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  ended: 'bg-slate-100 text-slate-600 border border-slate-200',
+};
+
+export function StatusPill({ status, label }) {
+  const cls = STATUS_STYLE[String(status || '').toLowerCase()] || STATUS_STYLE.done;
+  const isOngoing = String(status || '').toLowerCase() === 'ongoing' || String(status || '').toLowerCase() === 'active';
+  return (
+    <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${cls}`}>
+      {isOngoing && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+      {label || status}
+    </span>
+  );
+}
+
+// ── Subject overview ──────────────────────────────────────────────────────
+export function MetaChip({ kind = 'sem', value }) {
+  if (value == null || value === '') return null;
+  const map = {
+    sem: ['bg-emerald-50 text-emerald-700', `Sem ${value}`],
+    group: ['bg-blue-50 text-blue-700', `Group ${value}`],
+    dept: ['bg-blue-50 text-blue-700', `${value}`],
+    shift: ['bg-purple-50 text-purple-700', value],
+  };
+  const [cls, text] = map[kind] || map.sem;
+  return <span className={`inline-flex items-center px-2 py-[3px] rounded-md text-[10.5px] font-bold ${cls}`}>{text}</span>;
+}
+
+export function SubjectCard({ subject, index = 0, onClick, footer }) {
+  const glyphs = ['code', 'layers', 'chip', 'book', 'share', 'clipboard'];
+  const palette = ['blue', 'purple', 'emerald', 'amber', 'indigo', 'rose'];
+  const glyph = glyphs[index % glyphs.length];
+  const a = ACCENTS[palette[index % palette.length]] || ACCENTS.blue;
+  const dept = formatDepartment(subject.departmentId, subject.departmentCode) || '—';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.25) }}
+      onClick={onClick}
+      className={`${CARD} p-3.5 flex flex-col gap-2.5 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className={`w-9 h-9 rounded-lg ${a.bg} ${a.text} grid place-items-center shrink-0`}>
+          <Icon name={glyph} size={17} />
+        </span>
+        <div className="min-w-0 flex-1">
+          {/* formatSubject already renders "Name (CODE)" — appending the code
+              again here is what produced "afsd (451) (451)". */}
+          <div className="text-[13px] font-bold text-slate-800 truncate">
+            {formatSubject(subject)}
+          </div>
+          <div className="text-[11px] text-slate-500 truncate">{dept}</div>
+        </div>
+        {onClick && (
+          <span className="shrink-0 w-7 h-7 rounded-full border border-slate-200 grid place-items-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-colors">
+            <Icon name="chevronRight" size={13} />
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <MetaChip kind="sem" value={subject.semester} />
+        <MetaChip kind="group" value={subject.section} />
+        {subject.shift && <MetaChip kind="shift" value={`${formatShift(subject.shift)} Shift`} />}
+      </div>
+
+      {footer && <div className="text-[11px] text-slate-500 flex items-center gap-3">{footer}</div>}
+    </motion.div>
+  );
+}
+
+export function SubjectOverview({ subjects = [], title = 'Subject Overview', limit = 4, action, footerFor }) {
+  if (!subjects || subjects.length === 0) return null;
+  const visible = subjects.slice(0, limit);
+  return (
+    <Panel
+      title={title}
+      icon="book"
+      iconAccent="blue"
+      action={action}
+      bodyClassName="px-5 pb-5"
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {visible.map((s, i) => (
+          <SubjectCard
+            key={s._id || s.id || i}
+            subject={s}
+            index={i}
+            footer={footerFor ? footerFor(s) : null}
+          />
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+// ── Recent sessions table ─────────────────────────────────────────────────
+export function SessionTable({ columns, rows, emptyTitle = 'No sessions yet', emptyHint = 'Attendance sessions will appear here once one are started.' }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-left">
+        <thead>
+          <tr>
+            {columns.map(c => (
+              <th key={c} className="px-3 py-2.5 text-[11px] font-bold text-slate-500 border-b border-slate-200 whitespace-nowrap">
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className="px-3 py-12 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <span className="w-10 h-10 rounded-full bg-slate-100 grid place-items-center">
+                    <Icon name="clipboard" size={18} className="text-slate-400" />
+                  </span>
+                  <div className="text-[13.5px] font-bold text-slate-700">{emptyTitle}</div>
+                  <div className="text-[12px] text-slate-400 max-w-[280px]">{emptyHint}</div>
+                </div>
+              </td>
+            </tr>
+          ) : rows.map((r, i) => (
+            <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+              {columns.map(c => (
+                <td key={c} className="px-3 py-3 text-[12.5px] text-slate-600 whitespace-nowrap">
+                  {r[c]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Quick actions ─────────────────────────────────────────────────────────
+export function QuickActions({ actions = [] }) {
+  if (!actions.length) return null;
+  return (
+    <Panel title="Quick Actions" icon="zap" iconAccent="blue" bodyClassName="px-4 pb-4">
+      <div className="grid grid-cols-2 gap-2.5">
+        {actions.map((a) => {
+          const acc = ACCENTS[a.accent] || ACCENTS.blue;
+          return (
+            <button
+              key={a.label}
+              type="button"
+              onClick={a.onClick}
+              className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left hover:border-blue-300 hover:bg-blue-50/40 transition-colors group"
+            >
+              <span className={`w-8 h-8 rounded-lg ${acc.bg} ${acc.text} grid place-items-center shrink-0`}>
+                <Icon name={a.icon} size={15} />
+              </span>
+              <span className="text-[12.5px] font-bold text-slate-700 group-hover:text-blue-700 transition-colors truncate">
+                {a.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+// ── Misc ──────────────────────────────────────────────────────────────────
+export function EmptyState({ icon = 'users', title, text, hint }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-10 gap-2">
+      <span className="w-11 h-11 rounded-full bg-slate-100 grid place-items-center">
+        <Icon name={icon} size={19} className="text-slate-400" />
+      </span>
+      {title && <div className="text-[13.5px] font-bold text-slate-700">{title}</div>}
+      {text && <p className="text-[13px] text-slate-500 max-w-sm">{text}</p>}
+      {hint && <p className="text-[12px] text-slate-400 max-w-sm">{hint}</p>}
+    </div>
+  );
+}
+
+export function ListRow({ icon = 'check', iconAccent = 'blue', title, subtitle, trailing, index = 0, onClick }) {
+  const a = ACCENTS[iconAccent] || ACCENTS.blue;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22, delay: Math.min(index * 0.03, 0.25) }}
+      onClick={onClick}
+      className={`flex items-center gap-3 py-2.5 ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      <span className={`w-8 h-8 rounded-full ${a.bg} ${a.text} grid place-items-center shrink-0`}>
+        <Icon name={icon} size={15} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-semibold text-slate-700 truncate">{title}</div>
+        {subtitle && <div className="text-[11.5px] text-slate-500 truncate">{subtitle}</div>}
+      </div>
+      {trailing && <div className="shrink-0 text-[11px] text-slate-400">{trailing}</div>}
+    </motion.div>
+  );
+}
+
 export function RollLookup({ api }) {
   const [roll, setRoll] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -207,9 +667,7 @@ export function RollLookup({ api }) {
     e.preventDefault();
     const trimmed = roll.trim();
     if (!trimmed) return;
-    setLoading(true);
-    setError('');
-    setResult(null);
+    setLoading(true); setError(''); setResult(null);
     try {
       const res = await api.get('/users/lookup-by-roll', { params: { roll: trimmed } });
       setResult(res.data.student);
@@ -221,79 +679,33 @@ export function RollLookup({ api }) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: 0.1 }}
-      className="rounded-2xl border border-[#1C3A2B] bg-[#0D2419]/70 p-4 sm:p-5"
-    >
-      <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">Search by Roll</h2>
+    <Panel title="Search by Roll" icon="search" bodyClassName="px-5 pb-5">
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
-          type="text"
-          value={roll}
+          type="text" value={roll}
           onChange={e => { setRoll(e.target.value); setError(''); setResult(null); }}
           placeholder="e.g. 800768"
-          className="flex-1 min-w-0 rounded-lg bg-white/[0.03] border border-[#1C3A2B] px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 transition-colors"
+          className="flex-1 min-w-0 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
         />
-        <button
-          type="submit"
-          disabled={loading || !roll.trim()}
-          className="shrink-0 rounded-lg bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-sm font-semibold transition-colors flex items-center gap-2"
-        >
-          <Icon name="search" size={14} />
+        <button type="submit" disabled={loading || !roll.trim()}
+          className="shrink-0 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-[13px] font-bold transition-colors">
           {loading ? 'Searching...' : 'Search'}
         </button>
       </form>
-
-      {error && (
-        <div className="mt-3 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
-          {error}
-        </div>
-      )}
-
+      {error && <div className="mt-3 text-[12px] text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</div>}
       {result && (
-        <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#1C3A2B] bg-white/[0.02] px-4 py-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-semibold text-white shrink-0">
-            {(result.name || '?').trim().charAt(0).toUpperCase()}
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="w-9 h-9 rounded-full bg-blue-600 text-white grid place-items-center text-[12px] font-bold shrink-0">
+            {(result.name || '?').charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-white truncate">{result.name}</div>
-            <div className="text-xs text-slate-500 truncate">
-              Roll: {result.studentId} • {formatDepartment(result.departmentId, result.departmentCode) || '-'} • {formatShift(result.shift)} Shift • Sem {result.semester} • Group {result.section}
-            </div>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="text-xs text-slate-500">Mobile</div>
-            <div className="text-sm font-semibold text-emerald-400 tabular-nums">
-              {result.mobile || <span className="text-slate-600 font-normal">Not provided</span>}
+            <div className="text-[13px] font-bold text-slate-800 truncate">{result.name}</div>
+            <div className="text-[11.5px] text-slate-500 truncate">
+              Roll: {result.studentId} • {formatDepartment(result.departmentId, result.departmentCode) || '-'} • Sem {result.semester} • Group {result.section}
             </div>
           </div>
         </div>
       )}
-    </motion.div>
-  );
-}
-
-// A single row inside a "recent activity"-style list — icon bubble, name,
-// subtitle, and a small trailing tag/date on the right.
-export function ListRow({ icon = 'check', iconAccent = 'emerald', title, subtitle, trailing, index = 0 }) {
-  const a = ACCENTS[iconAccent] || ACCENTS.emerald;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.3) }}
-      className="flex items-center gap-3 rounded-xl border border-[#1C3A2B] bg-[#0D2419]/70 px-4 py-3"
-    >
-      <span className={`w-8 h-8 rounded-full ${a.bg} ${a.text} flex items-center justify-center shrink-0`}>
-        <Icon name={icon} size={14} />
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-white truncate">{title}</div>
-        {subtitle && <div className="text-xs text-slate-500 truncate">{subtitle}</div>}
-      </div>
-      {trailing && <div className="shrink-0">{trailing}</div>}
-    </motion.div>
+    </Panel>
   );
 }

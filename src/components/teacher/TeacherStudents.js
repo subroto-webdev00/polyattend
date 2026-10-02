@@ -96,7 +96,7 @@ export default function TeacherStudents() {
       {error && (
         <div style={{
           background: 'rgba(248, 113, 113, 0.1)', border: '1px solid rgba(248, 113, 113, 0.25)',
-          borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f87171', marginBottom: 16,
+          borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 16,
         }}>
           ⚠️ {error}
         </div>

@@ -1,253 +1,303 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 import {
-  DashboardPage, DashboardLoading, DashboardHero, DashboardClock,
-  StatGrid, StatCard, SectionHeader, EmptyState, ListRow, SubjectOverview,
+  DashboardPage, DashboardLoading, DashboardHeader,
+  StatGrid, StatCard, CardGlyph, ProgressRing,
+  Panel, EmptyState, SubjectCard, SessionTable,
+  StatusPill, QuickActions, ViewAll, RangeSelect, AreaChart, ClassRow,
 } from '@/components/common/DashboardKit';
 
-/* ------------------------------------------------------------------ */
-/*  All data-fetching / business logic below is unchanged from the     */
-/*  original component (animated counters, Bangladesh-time greeting,   */
-/*  active-session end action, live pulse indicator) — only markup +   */
-/*  styling has been redesigned to match Teacher Dashboard's dark      */
-/*  theme via the shared DashboardKit.                                 */
-/* ------------------------------------------------------------------ */
-
-function AnimatedNumber({ value, duration = 700 }) {
-  const [display, setDisplay] = useState(0);
-  const startRef = useRef(0);
-  const rafRef = useRef(null);
-
-  useEffect(() => {
-    const startVal = startRef.current;
-    const diff = value - startVal;
-    if (diff === 0) { setDisplay(value); return; }
-    const startTime = performance.now();
-    const tick = (now) => {
-      const t = Math.min(1, (now - startTime) / duration);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      setDisplay(Math.round(startVal + diff * eased));
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        startRef.current = value;
-      }
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => rafRef.current && cancelAnimationFrame(rafRef.current);
-  }, [value, duration]);
-
-  return display;
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
 }
 
-// The greeting ("Good Morning, Admin") moved to the top bar in AppShell,
-// so the hero no longer needs it. The live clock below is still fed by
-// `now`, which keeps ticking.
-function sessionTitle(session) {
-  return `${formatSubject(session.subjectId)} — Sem ${session.semester}, Group ${session.section || '—'}`;
-}
-
-function sessionSubtitle(session) {
-  const shift = formatShift(session.shift || session.subjectId?.shift);
-  return [
-    formatDepartment(session.departmentId),
-    shift ? `${shift} Shift` : '',
-    session.teacherId?.name ? `Teacher: ${session.teacherId.name}` : '',
-    session.date ? new Date(session.date).toLocaleDateString('en-BD') : '',
-  ].filter(Boolean).join(' • ');
+// Change between the current count and the count one month ago, rounded to one
+// decimal. Returns null when there is no usable baseline (a fresh install, or
+// a count that was zero a month ago) so the caller can leave the trend line
+// out rather than print a number that isn't real.
+function pctChange(current, previous) {
+  if (!previous || previous <= 0) return null;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ students: 0, teachers: 0, subjects: 0, sessions: 0 });
+  const router = useRouter();
+  const [stats, setStats] = useState({ students: 0, teachers: 0, subjects: 0 });
+  const [prev, setPrev] = useState({ students: 0, teachers: 0, subjects: 0 });
   const [subjects, setSubjects] = useState([]);
-  const [recentSessions, setRecentSessions] = useState([]);
-  const [activeSessions, setActiveSessions] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [endingId, setEndingId] = useState(null);
   const [now, setNow] = useState(new Date());
   const [adminName, setAdminName] = useState('');
 
-  const handleEndSession = async (id) => {
-    if (!confirm('End this session right now? Anyone who has not marked attendance yet will become absent.')) return;
-    setEndingId(id);
-    try {
-      await api.put(`/sessions/${id}/end`);
-      setRecentSessions(prev => prev.map(s => s._id === id ? { ...s, status: 'ended' } : s));
-      setActiveSessions(prev => prev.filter(s => s._id !== id));
-    } catch (e) {
-      alert(e?.response?.data?.message || 'Could not end Session');
-    } finally {
-      setEndingId(null);
-    }
-  };
-
   useEffect(() => {
-    // Keep the greeting/time fresh without a full page reload.
-    const timer = setInterval(() => setNow(new Date()), 60 * 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setNow(new Date()), 60 * 1000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem('user');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setAdminName(parsed?.name || parsed?.fullName || '');
-      }
+      if (raw) setAdminName(JSON.parse(raw)?.name || '');
     } catch {
-      // ignore — greeting just falls back to a generic label
+      // ignore — the greeting just falls back to a generic label
     }
   }, []);
 
   useEffect(() => {
-    // PERFORMANCE: this used to call `/users?role=student` and
-    // `/users?role=teacher` with no limit, just to read `.count` off the
-    // response — but that meant downloading every student's and every
-    // teacher's full record (name, email, department, etc.) on every
-    // single dashboard load, for every admin, every time. `countOnly=true`
-    // runs a plain database count and returns just the number — no
-    // documents are fetched or sent over the network.
+    // A month ago, used only as the baseline for the "from last month" trend.
+    const monthAgo = new Date();
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
     Promise.all([
-      api.get('/users?role=student&countOnly=true'),
-      api.get('/users?role=teacher&countOnly=true'),
+      api.get('/users', { params: { role: 'student', countOnly: true } }),
+      api.get('/users', { params: { role: 'teacher', countOnly: true } }),
+      api.get('/users', { params: { role: 'student', countOnly: true, since: monthAgo.toISOString() } }),
+      api.get('/users', { params: { role: 'teacher', countOnly: true, since: monthAgo.toISOString() } }),
       api.get('/subjects'),
       api.get('/sessions'),
-      api.get('/sessions?status=active'),
-    ]).then(([st, te, su, se, act]) => {
-      setStats({
-        students: st.data.count || 0,
-        teachers: te.data.count || 0,
-        subjects: su.data.subjects?.length || 0,
-        sessions: se.data.count || 0,
-      });
-      setSubjects(su.data.subjects || []);
-      setRecentSessions(se.data.sessions?.slice(0, 6) || []);
-      // Fetched separately (not just top-6-recent) so an old/stray session
-      // that's still active never scrolls out of view.
-      setActiveSessions(act.data.sessions || []);
-    }).catch(console.error).finally(() => setLoading(false));
+    ])
+      .then(([st, te, stNew, teNew, su, se]) => {
+        const allSubjects = su.data.subjects || [];
+        const subjectsNew = allSubjects.filter(
+          s => s.createdAt && new Date(s.createdAt) >= monthAgo,
+        ).length;
+
+        setStats({
+          students: st.data.count || 0,
+          teachers: te.data.count || 0,
+          subjects: allSubjects.length,
+        });
+        // The month-ago figure is the current count minus what arrived since.
+        setPrev({
+          students: Math.max(0, (st.data.count || 0) - (stNew.data.newCount || 0)),
+          teachers: Math.max(0, (te.data.count || 0) - (teNew.data.newCount || 0)),
+          subjects: Math.max(0, allSubjects.length - subjectsNew),
+        });
+        setSubjects(allSubjects);
+        setSessions(se.data.sessions || []);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <DashboardLoading />;
 
+  // ── Attendance rate per day, for the 7-day area chart ────────────────
+  // Built from the sessions already in hand, so it is a real measurement
+  // rather than a decorative curve. Days with no class carry the last known
+  // rate forward, otherwise the line would break on every empty day.
+  const rateAll = (() => {
+    const p = sessions.reduce((s, x) => s + (x.presentCount || 0), 0);
+    const t = sessions.reduce((s, x) => s + (x.totalStudents || 0), 0);
+    return t ? Math.round((p / t) * 1000) / 10 : 0;
+  })();
+
+  const weekSeries = (() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toDateString();
+      const own = sessions.filter((s) => s.date && new Date(s.date).toDateString() === key);
+      const present = own.reduce((s, x) => s + (x.presentCount || 0), 0);
+      const total = own.reduce((s, x) => s + (x.totalStudents || 0), 0);
+      days.push({
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        value: total ? Math.round((present / total) * 100) : null,
+      });
+    }
+    let last = rateAll;
+    return days.map((d) => {
+      if (d.value == null) return { ...d, value: last };
+      last = d.value;
+      return d;
+    });
+  })();
+
+  // Today's classes — anything that started today, most recent first.
+  const todayClasses = sessions
+    .filter((s) => s.date && new Date(s.date).toDateString() === new Date().toDateString())
+    .slice(0, 6);
+
   const statConfigs = [
-    { key: 'students', label: 'Students', icon: 'users', accent: 'blue', value: stats.students },
-    { key: 'teachers', label: 'Teachers', icon: 'users', accent: 'emerald', value: stats.teachers },
-    { key: 'subjects', label: 'Subjects', icon: 'book', accent: 'amber', value: stats.subjects },
-    { key: 'sessions', label: 'Sessions', icon: 'clipboard', accent: 'purple', value: stats.sessions },
+    {
+      key: 'students', label: 'Students', icon: 'users', accent: 'blue',
+      value: stats.students.toLocaleString(),
+      trend: pctChange(stats.students, prev.students),
+      art: <CardGlyph name="users" />,
+    },
+    {
+      key: 'teachers', label: 'Teachers', icon: 'users', accent: 'purple',
+      value: stats.teachers.toLocaleString(),
+      trend: pctChange(stats.teachers, prev.teachers),
+      art: <CardGlyph name="school" />,
+    },
+    {
+      key: 'subjects', label: 'Subjects', icon: 'book', accent: 'amber',
+      value: String(stats.subjects),
+      trend: pctChange(stats.subjects, prev.subjects),
+      art: <CardGlyph name="book" />,
+    },
+    {
+      key: 'attendance', label: 'Attendance', icon: 'clipboard', accent: 'emerald',
+      value: `${rateAll}%`,
+      // Attendance has no month-over-month count, so no trend here — the
+      // ProgressRing already carries the "how good is it" signal.
+      art: <ProgressRing percent={rateAll} />,
+    },
   ];
-
-
 
   return (
     <DashboardPage>
-      <DashboardHero
-  
+      <DashboardHeader
+        greeting={greeting()}
         name={adminName || 'Admin'}
-        subtitle="Admin"
-        subtitleColor="text-indigo-300"
-        rightSlot={<DashboardClock now={now} />}
+        subtitle="Here's what's happening in your PolyAttend system today."
+        now={now}
       />
 
       <StatGrid>
         {statConfigs.map((c, i) => (
-          <StatCard key={c.key} index={i} icon={c.icon} label={c.label} value={<AnimatedNumber value={c.value} />} accent={c.accent} />
+          <StatCard
+            key={c.key}
+            index={i}
+            icon={c.icon}
+            label={c.label}
+            value={c.value}
+            accent={c.accent}
+            illustration={c.art}
+            trend={c.trend}
+            trendLabel="from last month"
+          />
         ))}
       </StatGrid>
 
-      <SubjectOverview subjects={subjects} title="Subject Overview" limit={6} />
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <Panel
+          className="xl:col-span-2"
+          title="Attendance Overview"
+          icon="clipboard"
+          subtitle="Last 7 days attendance rate"
+          action={<RangeSelect />}
+        >
+          <AreaChart data={weekSeries} />
+        </Panel>
 
-      <AnimatePresence>
-        {activeSessions.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <SectionHeader title={`Currently Active Sessions (${activeSessions.length})`} />
-            <div className="space-y-2 mb-2">
-              {activeSessions.map((s, i) => (
-                <motion.div
+        <Panel
+          title="Today's Classes"
+          icon="calendar"
+          action={<ViewAll onClick={() => router.push('/admin/reports')}>View All</ViewAll>}
+        >
+          {todayClasses.length === 0 ? (
+            <EmptyState
+              icon="calendar"
+              title="No classes today"
+              text="Attendance sessions will appear here once a Teacher starts one."
+            />
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {todayClasses.map((s, i) => (
+                <ClassRow
                   key={s._id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.3) }}
-                  className="flex items-center gap-3 rounded-xl bg-[#0D2419]/70 px-4 py-3"
-                >
-                  <span className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Icon name="clipboard" size={14} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{sessionTitle(s)}</div>
-                    <div className="text-xs text-slate-500 truncate">{sessionSubtitle(s)}</div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-sm font-semibold text-white tabular-nums">{s.presentCount}/{s.totalStudents}</div>
-                    <button
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-colors disabled:opacity-50"
-                      disabled={endingId === s._id}
-                      onClick={() => handleEndSession(s._id)}
-                    >
-                      {endingId === s._id ? '...' : 'End'}
-                    </button>
-                  </div>
-                </motion.div>
+                  index={i}
+                  time={new Date(s.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  title={formatSubject(s.subjectId)}
+                  subtitle={[
+                    formatDepartment(s.departmentId, s.departmentCode),
+                    `Sem ${s.semester}`,
+                    `Group ${s.section}`,
+                  ].filter(Boolean).join(' • ')}
+                  status={s.status === 'active' ? 'ongoing' : 'upcoming'}
+                  statusLabel={s.status === 'active' ? 'Ongoing' : 'Upcoming'}
+                />
               ))}
             </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
+          )}
+        </Panel>
+      </div>
 
-      <section>
-        <SectionHeader title="Recent Sessions" />
-        {recentSessions.length === 0 ? (
-          <EmptyState icon="clipboard" text="No sessions yet" />
+      <Panel
+        title="Subject Overview"
+        icon="book"
+        action={<ViewAll onClick={() => router.push('/admin/subjects')}>View All Subjects</ViewAll>}
+      >
+        {subjects.length === 0 ? (
+          <EmptyState
+            icon="book"
+            title="No subjects yet"
+            text="Subjects will appear here once you add them."
+          />
         ) : (
-          <div className="space-y-2">
-            {recentSessions.map((s, i) => (
-              <ListRow
-                key={s._id}
-                index={i}
-                icon="clipboard"
-                iconAccent="emerald"
-                title={sessionTitle(s)}
-                subtitle={sessionSubtitle(s)}
-                trailing={
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-white tabular-nums">{s.presentCount}/{s.totalStudents}</div>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        s.status === 'active'
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-white/[0.05] text-slate-500'
-                      }`}>
-                        {s.status === 'active' && <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-400">
-                          <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping" />
-                        </span>}
-                        {s.status}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+            {subjects.slice(0, 4).map((s, i) => {
+              // Teacher and student counts come from this subject's sessions —
+              // the only per-subject numbers the app already stores.
+              const mine = sessions.filter(
+                (x) => (x.subjectId?._id || x.subjectId?.id) === (s._id || s.id),
+              );
+              const teachers = new Set(mine.map((x) => x.teacherId?.name).filter(Boolean)).size;
+              const students = Math.max(0, ...mine.map((x) => x.totalStudents || 0));
+
+              return (
+                <SubjectCard
+                  key={s._id || s.id || i}
+                  subject={s}
+                  index={i}
+                  footer={
+                    <>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="users" size={12} /> {teachers} Teachers
                       </span>
-                    </div>
-                    {s.status === 'active' && (
-                      <button
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-colors disabled:opacity-50"
-                        disabled={endingId === s._id}
-                        onClick={() => handleEndSession(s._id)}
-                        title="Close a stuck / test session"
-                      >
-                        {endingId === s._id ? '...' : 'End'}
-                      </button>
-                    )}
-                  </div>
-                }
-              />
-            ))}
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="id" size={12} /> {students} Students
+                      </span>
+                    </>
+                  }
+                />
+              );
+            })}
           </div>
         )}
-      </section>
+      </Panel>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <Panel
+          className="xl:col-span-2"
+          title="Recent Sessions"
+          icon="clock"
+          bodyClassName="px-2 pb-3"
+        >
+          <SessionTable
+            columns={['#', 'Subject', 'Class', 'Group', 'Shift', 'Date & Time', 'Status']}
+            rows={sessions.slice(0, 6).map((s, i) => ({
+              '#': i + 1,
+              Subject: formatSubject(s.subjectId),
+              Class: `Sem ${s.semester}`,
+              Group: s.section || '—',
+              Shift: formatShift(s.shift || s.subjectId?.shift) || '—',
+              'Date & Time': s.date ? new Date(s.date).toLocaleString('en-US') : '—',
+              Status: <StatusPill status={s.status} />,
+            }))}
+          />
+        </Panel>
+
+        <QuickActions
+          actions={[
+            { icon: 'users', label: 'Add Teacher', accent: 'blue', onClick: () => router.push('/admin/teachers') },
+            { icon: 'book', label: 'Add Subject', accent: 'emerald', onClick: () => router.push('/admin/subjects') },
+            { icon: 'excel', label: 'Generate Report', accent: 'purple', onClick: () => router.push('/admin/reports') },
+            { icon: 'settings', label: 'Manage Users', accent: 'cyan', onClick: () => router.push('/admin/users') },
+          ]}
+        />
+      </div>
     </DashboardPage>
   );
 }

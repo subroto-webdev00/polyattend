@@ -13,62 +13,60 @@
 }
 
 :root {
-  /* Brand */
-  --primary: #16a34a;
-  --primary-dark: #15803d;
-  --primary-light: rgba(22, 163, 74, 0.16);
-  --primary-mid: #22c55e;
-  --primary-glow: rgba(22, 163, 74, 0.18);
+  /* Brand — blue, as on the reference dashboards */
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: rgba(37, 99, 235, 0.10);
+  --primary-mid: #3b82f6;
+  --primary-glow: rgba(37, 99, 235, 0.20);
 
   /* Accents */
   --accent: #f59e0b;
-  --accent-light: rgba(245, 158, 11, 0.16);
-  --danger: #f43f5e;
-  --danger-light: rgba(244, 63, 94, 0.14);
+  --accent-light: rgba(245, 158, 11, 0.14);
+  --danger: #ef4444;
+  --danger-light: rgba(239, 68, 68, 0.10);
   --info: #6366f1;
-  --info-light: rgba(99, 102, 241, 0.16);
-  --success: #22c55e;
-  --success-light: rgba(34, 197, 94, 0.16);
-  --purple: #a78bfa;
-  --purple-light: rgba(167, 139, 250, 0.16);
+  --info-light: rgba(99, 102, 241, 0.12);
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.12);
+  --purple: #8b5cf6;
+  --purple-light: rgba(139, 92, 246, 0.12);
 
-  /* Neutral surfaces — deep emerald dark. Every surface is a green-black
-     rather than a neutral grey/black, so the whole app reads as one
-     emerald theme instead of "dark mode with green buttons". */
-  --bg: #0D2419;
-  --bg2: #081811;
-  --bg3: #163425;
-  --bg4: #1F4531;
+  /* Surfaces — a light slate canvas with white cards sitting on top of it. */
+  --bg: #ffffff;
+  --bg2: #f8fafc;
+  --bg3: #f1f5f9;
+  --bg4: #e2e8f0;
 
-  /* Text — slightly desaturated green-tinted whites so they harmonise
-     with the emerald canvas instead of looking like pure-white stickers */
-  --txt: #EAF5EF;
-  --txt2: #9DC0AC;
-  --txt3: #6E937F;
+  /* Text — slate, so it reads as one system alongside the blue accents */
+  --txt: #0f172a;
+  --txt2: #64748b;
+  --txt3: #94a3b8;
 
   /* Borders */
-  --border: #1C3A2B;
-  --border2: #27523C;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
 
   /* Shape */
   --radius: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
 
-  /* Shadows — deeper/darker so cards still read as "lifted" on a dark page */
-  --shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.4);
+  /* Shadows — soft and low-contrast, which is what lifts a white card off a
+     pale page. The dark-theme values were near-black and read as smudges. */
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.10);
+  --shadow-xl: 0 24px 56px rgba(15, 23, 42, 0.14);
 
   --sidebar-w: 260px;
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   EMERALD BACKDROP — applies to every single page in the app.
+   LIGHT CANVAS — applies to every single page in the app.
    Painted as two fixed pseudo-element layers behind the app shell:
-     layer 1 (::before) → the faint emerald grid
-     layer 2 (::after)  → the slow-breathing emerald glow
+     layer 1 (::before) → a barely-there slate grid
+     layer 2 (::after)  → a faint blue wash in the corners
    Both are `position: fixed`, so they stay put while inner containers
    (.shell-content, modals) scroll their own content over the top.
 
@@ -77,21 +75,26 @@
      1. <html>'s box is the whole document, so the gradient spans the
         full scroll height. On <body> with `fixed`, the paint stops at
         the viewport and everything below the fold falls back to the
-        default white canvas — which turned the translucent cards
-        light grey once you scrolled past one screen.
-     2. `background-color` on <html> guarantees a deep-emerald floor
-        even during overscroll, so there is never a white flash.
+        default white canvas — which turned the cards light grey once
+        you scrolled past one screen.
+     2. `background-color` on <html> guarantees a pale-slate floor even
+        during overscroll, so there is never a dark flash.
+
+   Both layers are dialled right down from the old emerald treatment: that
+   grid was tuned for a near-black page and reads as visible noise on a pale
+   one, and the glow was a pulsing green bloom that has no business on a
+   white canvas.
    ══════════════════════════════════════════════════════════════════ */
 html {
-  background-color: #04120B;
-  background-image: linear-gradient(160deg, #05170E 0%, #082A1E 26%, #0A2C1E 52%, #06190F 76%, #04120B 100%);
+  background-color: #f1f5f9;
+  background-image: linear-gradient(160deg, #f8fafc 0%, #eef2ff 28%, #f8fafc 55%, #f1f5f9 78%, #eef2f7 100%);
   background-repeat: no-repeat;
   min-height: 100%;
 }
 
 body {
   font-family: 'Inter', -apple-system, sans-serif;
-  /* Solid emerald floor — the <html> gradient shows through this. */
+  /* Solid floor — the <html> gradient shows through this. */
   background: transparent;
   color: var(--txt);
   font-size: 14px;
@@ -106,8 +109,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(52, 211, 153, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(52, 211, 153, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(15, 23, 42, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.022) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
@@ -118,18 +121,17 @@ body::after {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 900px 620px at 12% 4%, rgba(34, 197, 94, 0.20) 0%, transparent 60%),
-    radial-gradient(ellipse 820px 560px at 88% 14%, rgba(16, 185, 129, 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse 1100px 700px at 50% 108%, rgba(5, 150, 105, 0.22) 0%, transparent 62%),
-    radial-gradient(circle 700px 520px at 72% 58%, rgba(45, 212, 191, 0.10) 0%, transparent 55%);
-  animation: emeraldGlowPulse 9s ease-in-out infinite;
+    radial-gradient(ellipse 900px 620px at 12% 4%, rgba(59, 130, 246, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 820px 560px at 88% 14%, rgba(99, 102, 241, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 1100px 700px at 50% 108%, rgba(37, 99, 235, 0.05) 0%, transparent 62%);
+  animation: canvasGlowPulse 12s ease-in-out infinite;
 }
 
-@keyframes emeraldGlowPulse {
+@keyframes canvasGlowPulse {
 
   0%,
   100% {
-    opacity: 0.62;
+    opacity: 0.75;
   }
 
   50% {
@@ -162,7 +164,7 @@ body::after {
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  background: linear-gradient(180deg, #082014 0%, #061810 60%, #05150E 100%);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -179,7 +181,7 @@ body::after {
   align-items: center;
   gap: 12px;
   padding: 22px 18px 16px;
-  border-bottom: 1px solid rgba(39, 82, 60, 0.55);
+  border-bottom: 1px solid var(--border);
 }
 
 /* ── Animated glowing gradient frame around the logo ──────────────
@@ -188,6 +190,11 @@ body::after {
    accent without touching the rest of the dark theme. The ring color
    sweeps through the brand green into blue/purple so it reads as a
    deliberate accent rather than a random rainbow. */
+/* ── Animated glowing gradient frame around the logo ──────────────
+   A rotating conic-gradient ring behind a solid inner panel, clipped
+   to a rounded rect — gives the sidebar header a premium, "alive"
+   accent. The ring sweeps through the brand blue into green/purple so
+   it reads as a deliberate accent rather than a random rainbow. */
 .sidebar-logo-frame {
   position: relative;
   margin: 14px 14px 4px;
@@ -195,7 +202,7 @@ body::after {
   padding: 1.5px;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 0 6px 22px rgba(22, 163, 74, 0.16), 0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 22px rgba(37, 99, 235, 0.18), 0 1px 3px rgba(15, 23, 42, 0.10);
 }
 
 .sidebar-logo-frame::before {
@@ -220,7 +227,7 @@ body::after {
 .sidebar-logo-frame .sidebar-logo {
   position: relative;
   z-index: 1;
-  background: #0A2116;
+  background: #ffffff;
   border-radius: 14.5px;
   border-bottom: none;
   padding: 16px 16px;
@@ -234,7 +241,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: #ffffff;
   flex-shrink: 0;
   box-shadow: 0 4px 14px var(--primary-glow);
   transition: transform 0.3s cubic-bezier(.34, 1.56, .64, 1);
@@ -247,14 +254,14 @@ body::after {
 .sidebar-logo-text {
   font-size: 17px;
   font-weight: 800;
-  color: #fff;
+  color: var(--txt);
   letter-spacing: -0.4px;
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .sidebar-logo-sub {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.38);
+  color: var(--txt3);
   font-weight: 500;
   margin-top: 1px;
 }
@@ -276,7 +283,7 @@ body::after {
 .sidebar-section {
   font-size: 9.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--txt3);
   text-transform: uppercase;
   letter-spacing: 1.2px;
   padding: 12px 10px 4px;
@@ -290,7 +297,7 @@ body::after {
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--txt2);
   font-size: 13.5px;
   font-family: inherit;
   cursor: pointer;
@@ -303,8 +310,8 @@ body::after {
 }
 
 .sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--bg3);
+  color: var(--txt);
   transform: translateX(3px);
 }
 
@@ -317,24 +324,17 @@ body::after {
 }
 
 .sidebar-item.active {
-  background: linear-gradient(135deg, rgba(22, 163, 74, 0.25), rgba(34, 197, 94, 0.15));
-  color: var(--primary-mid);
+  background: var(--primary);
+  color: #ffffff;
   font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.25);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
 }
 
+/* The left-edge stripe was a separate affordance for the old translucent
+   emerald active state. Now the active row is a solid blue pill, so the stripe
+   would sit on top of it as a pale line — suppressed. */
 .sidebar-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg, var(--primary-mid), var(--primary));
-  box-shadow: 0 0 10px var(--primary-mid);
-  animation: cinPop .3s cubic-bezier(.34, 1.56, .64, 1) both;
+  content: none;
 }
 
 .sidebar-item svg {
@@ -359,7 +359,7 @@ body::after {
   overflow: hidden;
   isolation: isolate;
   flex-shrink: 0;
-  box-shadow: 0 6px 22px rgba(22, 163, 74, 0.16), 0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 22px rgba(37, 99, 235, 0.18), 0 1px 3px rgba(15, 23, 42, 0.10);
 }
 
 .sidebar-footer-frame::before {
@@ -380,7 +380,7 @@ body::after {
 .sidebar-footer {
   position: relative;
   z-index: 1;
-  background: #0A2116;
+  background: #ffffff;
   border-radius: 14.5px;
   border-top: none;
   padding: 12px 12px;
@@ -412,7 +412,7 @@ body::after {
 .sidebar-username {
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--txt);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -420,13 +420,13 @@ body::after {
 
 .sidebar-role {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.38);
+  color: var(--txt3);
 }
 
 .sidebar-logout {
   border: none;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.4);
+  background: var(--danger-light);
+  color: var(--danger);
   cursor: pointer;
   padding: 7px;
   border-radius: 8px;
@@ -459,104 +459,58 @@ body::after {
 .top-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #082014;
+  gap: 12px;
+  padding: 10px 18px;
+  background: #ffffff;
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
-  /* Reorder per breakpoint; these are the mobile defaults. */
-  gap: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
-.top-nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 16px;
-  font-weight: 800;
-  color: #fff;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-/* Right-hand cluster: search box + role tag (mobile) + burger (desktop). */
 .top-nav-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  order: 3;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-/* Greeting block — the app name was removed from here; this is what the
-   top-left of the bar says instead. The subtitle is hidden on narrow
-   screens so the bar never wraps to two lines on a phone. */
-.top-nav-greeting {
-  order: 2;
-  min-width: 0;
-  flex: 1;
-}
-
-.top-nav-greeting-main {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  line-height: 1.25;
-}
-
-.top-nav-greeting-text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.top-nav-greeting-sub {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--txt2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Global search — hands the query to the role's Search Profile page. */
+/* Global search — fills the space between the burger and the right cluster. */
 .top-nav-search {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
+  max-width: 520px;
+  min-width: 0;
 }
 
 .top-nav-search-icon {
   position: absolute;
-  left: 10px;
+  left: 12px;
   display: flex;
   color: var(--txt3);
   pointer-events: none;
 }
 
 .top-nav-search-input {
-  width: 210px;
-  padding: 8px 12px 8px 32px;
-  border: 1.5px solid var(--border2);
-  border-radius: 20px;
-  background: var(--bg2);
+  width: 100%;
+  padding: 9px 14px 9px 36px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--bg3);
   color: var(--txt);
-  font-size: 12.5px;
+  font-size: 13px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s, width 0.2s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   -webkit-appearance: none;
   appearance: none;
 }
 
-/* Chrome's native search clear ("x") button renders light-on-light. */
+/* Chrome renders its own light-on-light clear button; hide it. */
 .top-nav-search-input::-webkit-search-cancel-button {
   -webkit-appearance: none;
   appearance: none;
@@ -568,79 +522,111 @@ body::after {
 
 .top-nav-search-input:focus {
   border-color: var(--primary);
+  background: #ffffff;
   box-shadow: 0 0 0 3px var(--primary-light);
-  width: 260px;
 }
 
-/* The desktop burger only exists on desktop; on mobile the left-hand
-   `.menu-btn` in the header is the toggle. */
-.top-nav-burger-desktop {
-  display: none;
-}
-
-.top-nav-logo-frame {
+/* Notification bell. The red dot sits on its top-right corner. */
+.top-nav-bell {
   position: relative;
-  border-radius: 10px;
-  padding: 1.5px;
-  overflow: hidden;
-  isolation: isolate;
-  flex-shrink: 0;
 }
 
-.top-nav-logo-frame::before {
+.top-nav-bell::after {
   content: '';
   position: absolute;
-  inset: -60%;
-  background: conic-gradient(from 0deg,
-    var(--primary) 0deg,
-    #22c55e 70deg,
-    #38bdf8 150deg,
-    #a78bfa 220deg,
-    var(--primary-dark) 290deg,
-    var(--primary) 360deg);
-  animation: sidebarFrameSpin 7s linear infinite;
-  z-index: 0;
+  top: 5px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 1.5px solid #ffffff;
 }
 
-.top-nav-logo-icon {
-  position: relative;
-  z-index: 1;
-  width: 30px;
-  height: 30px;
-  border-radius: 8.5px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
+/* Signed-in user block: avatar, name over role, chevron. */
+.top-nav-user {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-}
-
-.menu-btn {
+  gap: 9px;
+  padding: 4px 8px 4px 4px;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border-radius: 10px;
+  background: transparent;
   cursor: pointer;
-  padding: 7px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
+  font-family: inherit;
   transition: background 0.15s;
 }
 
-.menu-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+.top-nav-user:hover {
+  background: var(--bg3);
+}
+
+.top-nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.top-nav-user-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  text-align: left;
+  min-width: 0;
+}
+
+.top-nav-user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.top-nav-user-role {
+  font-size: 11px;
+  color: var(--txt2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.top-nav-user-chevron {
+  color: var(--txt3);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .top-nav-user-text {
+    display: none;
+  }
+
+  .top-nav-user-chevron {
+    display: none;
+  }
 }
 
 /* ===== BOTTOM NAV ===== */
 .bottom-nav {
   display: none;
   border-top: 1px solid var(--border);
-  background: #082014;
+  background: #ffffff;
   position: sticky;
   bottom: 0;
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
 }
 
 .bnav-btn {
@@ -696,10 +682,6 @@ body::after {
     display: none;
   }
 
-  .top-nav-greeting-sub {
-    display: none;
-  }
-
   .bottom-nav {
     display: flex;
   }
@@ -728,25 +710,16 @@ body::after {
     margin-left: calc(var(--sidebar-w) * -1);
   }
 
-  /* Greeting goes to the left edge, search + tag + burger to the right. */
-  .top-nav-greeting {
-    order: 1;
-  }
-
-  .top-nav-right {
-    order: 2;
-  }
-
-  .top-nav-role {
-    display: none;
-  }
-
+  /* Greeting and the role tag are gone from the bar; the right cluster uses
+     `margin-left: auto`, so no `order` juggling is needed any more. */
   .top-nav-burger-desktop {
     display: flex;
   }
 
-  /* Mobile-only burger in the header is redundant on desktop. */
-  .top-nav > .menu-btn {
+  /* The mobile-only burger is redundant on desktop. Scoped to the mobile burger
+     on purpose — a bare `.top-nav > .menu-btn` would also hide the
+     notification bell, which shares the `.menu-btn` base class. */
+  .top-nav-burger-mobile {
     display: none;
   }
 
@@ -866,7 +839,7 @@ body::after {
   /* Same emerald canvas the dashboard uses, so a logged-out visitor lands
      on the same brand the logged-in pages use. */
   background:
-    linear-gradient(160deg, #05170E 0%, #082A1E 26%, #0A2C1E 52%, #06190F 76%, #04120B 100%);
+    linear-gradient(160deg, #f8fafc 0%, #eef2ff 26%, #f8fafc 52%, #f1f5f9 76%, #eef2f7 100%);
   padding: 20px;
   position: relative;
   overflow: hidden;
@@ -879,8 +852,8 @@ body::after {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(52, 211, 153, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(52, 211, 153, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(15, 23, 42, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.022) 1px, transparent 1px);
   background-size: 44px 44px;
   pointer-events: none;
 }
@@ -920,7 +893,7 @@ body::after {
   height: 300px;
   bottom: -110px;
   right: -70px;
-  background: radial-gradient(circle, rgba(22, 163, 74, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.16) 0%, transparent 70%);
   animation: authOrbFloat2 11s ease-in-out infinite;
 }
 
@@ -935,24 +908,25 @@ body::after {
 }
 
 .auth-card {
-  /* Redefine shared design tokens locally so any inline var(--txtN)/var(--border) usage
-     inside the card automatically renders correctly on the dark background */
-  --bg: rgba(255, 255, 255, 0.05);
-  --txt: #ffffff;
-  --txt2: rgba(255, 255, 255, 0.55);
-  --txt3: rgba(255, 255, 255, 0.38);
-  --border: rgba(255, 255, 255, 0.08);
-  --border2: rgba(255, 255, 255, 0.14);
-  --primary-light: rgba(52, 211, 153, 0.14);
+  /* Keep the card a light surface like the rest of the app. The tokens are
+     redefined locally so any inline var(--txtN)/var(--border) usage inside
+     the card renders against white rather than the page canvas. */
+  --bg: #ffffff;
+  --txt: #0f172a;
+  --txt2: #64748b;
+  --txt3: #94a3b8;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --primary-light: rgba(37, 99, 235, 0.10);
 
-  background: rgba(9, 30, 20, 0.94);
+  background: #ffffff;
   border-radius: 20px;
   padding: 34px 30px;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(39, 82, 60, 0.7);
-  border-top-color: rgba(52, 211, 153, 0.22);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border);
+  border-top-color: rgba(37, 99, 235, 0.20);
   position: relative;
   z-index: 1;
   animation: authFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -968,13 +942,13 @@ body::after {
   width: 62px;
   height: 62px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #16a34a, #22c55e);
+  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 14px;
   color: #fff;
-  box-shadow: 0 10px 26px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.28);
 }
 
 .auth-title {
@@ -982,54 +956,53 @@ body::after {
   font-weight: 800;
   letter-spacing: -0.4px;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  color: #fff;
+  color: var(--txt);
 }
 
 .auth-sub {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--txt2);
   margin-top: 5px;
 }
 
-/* Dark form controls, scoped strictly to auth cards so dashboard forms stay untouched */
 .auth-card .form-label {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--txt2);
 }
 
 .auth-card .form-input,
 .auth-card .form-select {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  color: var(--txt);
   transition: all 0.25s ease;
 }
 
 .auth-card .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: var(--txt3);
 }
 
 .auth-card .form-input:hover,
 .auth-card .form-select:hover {
-  border-color: rgba(52, 211, 153, 0.55);
-  background: rgba(16, 185, 129, 0.06);
+  border-color: var(--primary);
+  background: #ffffff;
 }
 
 .auth-card .form-input:focus,
 .auth-card .form-select:focus {
   border-color: #34d399;
-  background: rgba(16, 185, 129, 0.08);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.16);
+  background: rgba(37, 99, 235, 0.05);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   outline: none;
 }
 
 .auth-card .form-select option {
-  background: #0A2116;
-  color: #fff;
+  background: #ffffff;
+  color: var(--txt);
 }
 
 .auth-card .btn-primary {
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  box-shadow: 0 4px 20px rgba(22, 163, 74, 0.3);
+  background: linear-gradient(135deg, var(--primary), var(--primary-mid));
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.28);
   position: relative;
   overflow: hidden;
 }
@@ -1046,7 +1019,7 @@ body::after {
 
 .auth-card .btn-primary:not(:disabled):hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px -8px rgba(22, 163, 74, 0.5);
+  box-shadow: 0 12px 28px -8px rgba(37, 99, 235, 0.45);
 }
 
 .auth-card .btn-primary:not(:disabled):hover::after {
@@ -1071,7 +1044,7 @@ body::after {
    low-frequency gradients, so they still read as "behind glass" without
    the blur. */
 .card {
-  background: rgba(15, 40, 27, 0.72);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -1096,7 +1069,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(5, 20, 13, 0.6);
+  background: var(--bg2);
 }
 
 .card-title {
@@ -1120,7 +1093,7 @@ body::after {
 }
 
 .stat-card {
-  background: rgba(15, 40, 27, 0.72);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px 16px;
@@ -1260,7 +1233,7 @@ body::after {
 
 .stat-amber .stat-icon {
   background: var(--accent-light);
-  color: #fbbf24;
+  color: #b45309;
 }
 
 .stat-red .stat-val {
@@ -1327,7 +1300,7 @@ body::after {
 
 .icon-amber {
   background: var(--accent-light);
-  color: #fbbf24;
+  color: #b45309;
 }
 
 .icon-red {
@@ -1394,7 +1367,7 @@ body::after {
 
 .tag-amber {
   background: var(--accent-light);
-  color: #fbbf24;
+  color: #b45309;
 }
 
 .tag-red {
@@ -1454,7 +1427,7 @@ body::after {
 .form-select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(22, 163, 74, 0.12);
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.14);
 }
 
 .form-input::placeholder {
@@ -1493,7 +1466,7 @@ body::after {
 .form-textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(22, 163, 74, 0.12);
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.14);
 }
 
 /* ===== BUTTONS ===== */
@@ -1514,7 +1487,7 @@ body::after {
   gap: 8px;
   transition: opacity 0.2s, transform 0.2s cubic-bezier(.16, 1, .3, 1), box-shadow 0.2s;
   letter-spacing: 0.2px;
-  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
   position: relative;
   overflow: hidden;
 }
@@ -1536,19 +1509,30 @@ body::after {
 .btn-primary:hover {
   opacity: 0.93;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.32);
 }
 
 .btn-primary:active {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.25);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
 }
 
+/* A disabled primary used to just drop to opacity 0.55, which on a light page
+   turns the blue gradient into pale blue and leaves the white label sitting at
+   roughly 1.9:1 — technically drawn, practically unreadable. Disabled buttons
+   now go neutral grey with muted text, which is both legible and the usual
+   light-theme convention. */
 .btn-primary:disabled {
-  opacity: 0.55;
+  background: var(--bg4);
+  color: var(--txt3);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+  opacity: 1;
+}
+
+.btn-primary:disabled::after {
+  display: none;
 }
 
 .btn-secondary {
@@ -1711,7 +1695,7 @@ body::after {
 }
 
 .warn-banner .info-text {
-  color: #fbbf24;
+  color: #b45309;
 }
 
 .danger-banner {
@@ -1828,7 +1812,7 @@ body::after {
 /* ===== TABLE ===== */
 .table-wrap {
   overflow-x: auto;
-  background: rgba(13, 36, 25, 0.72);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
@@ -1977,7 +1961,7 @@ tbody tr:nth-child(n+7) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(3, 16, 10, 0.72);
+  background: rgba(15, 23, 42, 0.5);
   z-index: 200;
   display: flex;
   align-items: flex-end;
@@ -2264,7 +2248,7 @@ tbody tr:nth-child(n+7) {
 
 /* ===== PROFILE CARD ===== */
 .profile-card {
-  background: linear-gradient(135deg, #0A2016 0%, #10301F 50%, #07251A 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 55%, #6366f1 100%);
   border-radius: var(--radius-lg);
   padding: 22px;
   color: #fff;
@@ -2282,7 +2266,7 @@ tbody tr:nth-child(n+7) {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 80% 50%, rgba(22, 163, 74, 0.2) 0%, transparent 60%);
+  background: radial-gradient(ellipse at 80% 50%, rgba(37, 99, 235, 0.22) 0%, transparent 60%);
   pointer-events: none;
   animation: cinGlowPulse 5s ease-in-out infinite;
 }
@@ -2383,7 +2367,7 @@ input:checked+.toggle-slider:before {
 
 /* ===== SUBJECT CARD ===== */
 .subject-card {
-  background: rgba(15, 40, 27, 0.72);
+  background: #ffffff;
   border: 2px solid var(--border2);
   border-radius: var(--radius-lg);
   padding: 16px 18px;
@@ -2400,7 +2384,7 @@ input:checked+.toggle-slider:before {
 .subject-card.selected {
   border-color: var(--primary);
   background: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 .subject-code {
@@ -2786,12 +2770,12 @@ input:checked+.toggle-slider:before {
   0%,
   100% {
     border-top-color: rgba(45, 212, 191, 0.12);
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow: 0 24px 56px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   50% {
     border-top-color: rgba(74, 222, 128, 0.22);
-    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 32px rgba(52, 211, 153, 0.06);
+    box-shadow: 0 28px 64px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 32px rgba(37, 99, 235, 0.10);
   }
 }
 

@@ -6,13 +6,14 @@ import toast from 'react-hot-toast';
 import Modal from '@/components/common/Modal';
 import { useAuth } from '@/context/AuthContext';
 import { formatDepartment, formatShift } from '@/lib/display';
+import { StatCard, CardGlyph } from '@/components/common/DashboardKit';
 
 // ─── Role config ────────────────────────────────────────────────
 const ROLE_META = {
-  admin: { label: 'Admin', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.14)', dot: '#60a5fa' },
-  departmentAdmin: { label: 'Department Admin', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.14)', dot: '#38bdf8' },
-  teacher: { label: 'Teacher', color: '#34d399', bg: 'rgba(52, 211, 153, 0.14)', dot: '#34d399' },
-  student: { label: 'Student', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.14)', dot: '#fbbf24' },
+  admin: { label: 'Admin', color: '#2563eb', bg: 'rgba(37, 99, 235, 0.14)', dot: '#2563eb' },
+  departmentAdmin: { label: 'Department Admin', color: '#0284c7', bg: 'rgba(2, 132, 199, 0.14)', dot: '#0284c7' },
+  teacher: { label: 'Teacher', color: '#047857', bg: 'rgba(5, 150, 105, 0.14)', dot: '#047857' },
+  student: { label: 'Student', color: '#b45309', bg: 'rgba(180, 83, 9, 0.14)', dot: '#b45309' },
 };
 
 function initials(name) {
@@ -44,7 +45,7 @@ function subInfo(u) {
 
 // ─── UserCard ───────────────────────────────────────────────────
 function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
-  const meta = ROLE_META[user.role] || { label: user.role, color: '#94a3b8', bg: 'var(--bg3)', dot: '#94a3b8' };
+  const meta = ROLE_META[user.role] || { label: user.role, color: '#64748b', bg: 'var(--bg3)', dot: '#64748b' };
   const info = subInfo(user);
   const [hov, setHov] = useState(false);
 
@@ -94,7 +95,7 @@ function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
             {isSelf && (
               <span style={{
                 marginLeft: 6, fontSize: 9, fontWeight: 700,
-                background: 'rgba(96, 165, 250, 0.18)', color: '#60a5fa',
+                background: 'rgba(37, 99, 235, 0.18)', color: '#2563eb',
                 padding: '1px 6px', borderRadius: 20, letterSpacing: '0.04em',
               }}>
                 YOU
@@ -113,8 +114,8 @@ function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{
             width: 9, height: 9, borderRadius: '50%',
-            background: user.isActive ? '#34d399' : '#f87171',
-            boxShadow: user.isActive ? '0 0 0 3px rgba(52, 211, 153, 0.18)' : '0 0 0 3px rgba(248, 113, 113, 0.18)',
+            background: user.isActive ? '#047857' : '#dc2626',
+            boxShadow: user.isActive ? '0 0 0 3px rgba(5, 150, 105, 0.18)' : '0 0 0 3px rgba(220, 38, 38, 0.18)',
             display: 'block',
           }} />
         </div>
@@ -159,7 +160,7 @@ function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
         <span style={{
           fontSize: 10.5, fontWeight: 600,
-          color: user.isActive ? '#34d399' : '#f87171',
+          color: user.isActive ? '#047857' : '#dc2626',
         }}>
           {user.isActive ? '● Active' : '○ Inactive'}
         </span>
@@ -174,8 +175,8 @@ function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
             padding: '5px 12px', fontSize: 11, fontWeight: 700,
             fontFamily: 'inherit', transition: 'all 0.15s',
             opacity: isSelf ? 0.4 : 1,
-            background: user.isActive ? 'rgba(248, 113, 113, 0.16)' : 'rgba(52, 211, 153, 0.16)',
-            color: user.isActive ? '#f87171' : '#34d399',
+            background: user.isActive ? 'rgba(220, 38, 38, 0.16)' : 'rgba(5, 150, 105, 0.16)',
+            color: user.isActive ? '#dc2626' : '#047857',
           }}
         >
           <Icon name={user.isActive ? 'x' : 'check'} size={11} />
@@ -187,10 +188,10 @@ function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
           onClick={() => onDelete(user)}
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-            border: '1px solid rgba(248, 113, 113, 0.35)', borderRadius: 8, cursor: 'pointer',
+            border: '1px solid rgba(220, 38, 38, 0.35)', borderRadius: 8, cursor: 'pointer',
             padding: '5px 12px', fontSize: 11, fontWeight: 700,
             fontFamily: 'inherit', transition: 'all 0.15s',
-            background: 'transparent', color: '#f87171', width: '100%', marginTop: 4,
+            background: 'transparent', color: '#dc2626', width: '100%', marginTop: 4,
           }}
         >
           <Icon name="trash" size={11} /> Delete
@@ -202,7 +203,7 @@ function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
 
 // ─── Table Row ──────────────────────────────────────────────────
 function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
-  const meta = ROLE_META[user.role] || { label: user.role, color: '#94a3b8', bg: 'var(--bg3)' };
+  const meta = ROLE_META[user.role] || { label: user.role, color: '#64748b', bg: 'var(--bg3)' };
   return (
     <tr style={{ transition: 'background 0.12s' }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
@@ -224,7 +225,7 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
             <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--txt)' }}>
               {user.name}
               {isSelf && (
-                <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, background: 'rgba(96, 165, 250, 0.18)', color: '#60a5fa', padding: '1px 5px', borderRadius: 20 }}>YOU</span>
+                <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, background: 'rgba(37, 99, 235, 0.18)', color: '#2563eb', padding: '1px 5px', borderRadius: 20 }}>YOU</span>
               )}
             </div>
             {user.studentId && (
@@ -251,7 +252,7 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
       </td>
       <td>
         {user.shift
-          ? <span style={{ fontSize: 11, fontWeight: 600, color: '#a78bfa', background: 'rgba(167, 139, 250, 0.16)', padding: '2px 9px', borderRadius: 20 }}>
+          ? <span style={{ fontSize: 11, fontWeight: 600, color: '#7c3aed', background: 'rgba(167, 139, 250, 0.16)', padding: '2px 9px', borderRadius: 20 }}>
             {formatShift(user.shift)}
           </span>
           : <span style={{ color: 'var(--txt3)' }}>—</span>}
@@ -260,8 +261,8 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
           fontSize: 11, fontWeight: 700,
-          color: user.isActive ? '#34d399' : '#f87171',
-          background: user.isActive ? 'rgba(52, 211, 153, 0.16)' : 'rgba(248, 113, 113, 0.16)',
+          color: user.isActive ? '#047857' : '#dc2626',
+          background: user.isActive ? 'rgba(5, 150, 105, 0.16)' : 'rgba(220, 38, 38, 0.16)',
           padding: '3px 10px', borderRadius: 20,
         }}>
           <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
@@ -278,8 +279,8 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
             border: 'none', borderRadius: 8, cursor: isSelf ? 'not-allowed' : 'pointer',
             padding: '5px 10px', fontSize: 11, fontWeight: 700,
             fontFamily: 'inherit', transition: 'all 0.15s', opacity: isSelf ? 0.4 : 1,
-            background: user.isActive ? 'rgba(248, 113, 113, 0.16)' : 'rgba(52, 211, 153, 0.16)',
-            color: user.isActive ? '#f87171' : '#34d399',
+            background: user.isActive ? 'rgba(220, 38, 38, 0.16)' : 'rgba(5, 150, 105, 0.16)',
+            color: user.isActive ? '#dc2626' : '#047857',
           }}
         >
           <Icon name={user.isActive ? 'x' : 'check'} size={11} />
@@ -293,10 +294,10 @@ function TableRow({ user, rowNum, onToggle, onDelete, isSelf }) {
             title="Delete permanently"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              border: '1px solid rgba(248, 113, 113, 0.35)', borderRadius: 8, cursor: 'pointer',
+              border: '1px solid rgba(220, 38, 38, 0.35)', borderRadius: 8, cursor: 'pointer',
               padding: '5px 10px', fontSize: 11, fontWeight: 700,
               fontFamily: 'inherit', transition: 'all 0.15s',
-              background: 'transparent', color: '#f87171',
+              background: 'transparent', color: '#dc2626',
             }}
           >
             <Icon name="trash" size={11} />
@@ -440,62 +441,56 @@ export default function AdminUsers({
   // ── Summary cards shown when roleFilter === 'all' ──
   const SummaryView = () => {
     const cards = [
-      { role: 'student',       label: 'Students',        icon: '🎓', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
-      { role: 'teacher',       label: 'Teachers',        icon: '👨‍🏫', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
-      { role: 'admin',         label: 'Super Admins',    icon: '🛡️', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-      { role: 'departmentAdmin', label: 'Department Admins', icon: '📋', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
+      { role: 'student',         label: 'Students',          icon: 'users',     accent: 'amber' },
+      { role: 'teacher',         label: 'Teachers',          icon: 'school',    accent: 'emerald' },
+      { role: 'admin',           label: 'Super Admins',      icon: 'shield',    accent: 'blue' },
+      { role: 'departmentAdmin', label: 'Department Admins', icon: 'clipboard', accent: 'purple' },
     ];
     return (
       <div>
         {/* Total banner */}
         <div style={{
-          background: 'linear-gradient(135deg, var(--primary) 0%, #059669 100%)',
-          borderRadius: 16, padding: '24px 28px', marginBottom: 20,
+          background: 'linear-gradient(135deg, var(--primary) 0%, #3b82f6 55%, #6366f1 100%)',
+          borderRadius: 16, padding: '22px 26px', marginBottom: 20,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          boxShadow: '0 4px 20px rgba(22,163,74,0.35)',
+          boxShadow: '0 4px 20px rgba(37,99,235,0.28)',
         }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
               Total Registered Users
             </div>
-            <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+            <div style={{ fontSize: 38, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
               {countLoading ? '—' : roleCounts._total ?? total}
             </div>
           </div>
-          <div style={{ fontSize: 52, opacity: 0.6 }}>👥</div>
+          <div style={{ opacity: 0.35 }}><Icon name="users" size={56} /></div>
         </div>
 
-        {/* Role count cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-          {cards.map(({ role, label, icon, color, bg }) => (
-            <div key={role} style={{
-              background: 'var(--bg)', border: `1px solid var(--border)`,
-              borderLeft: `4px solid ${color}`, borderRadius: 14,
-              padding: '18px 20px', boxShadow: 'var(--shadow)',
-              transition: 'transform 0.15s, box-shadow 0.15s',
-              cursor: 'default',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${color}22`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow)'; }}
-            >
-              <div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color, lineHeight: 1, marginBottom: 4 }}>
-                {countLoading ? '…' : (roleCounts[role] ?? 0)}
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--txt2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {label}
-              </div>
-            </div>
+        {/* Role counts. A fixed 4-column grid on desktop so the four cards
+            stretch across the full width — the previous `auto-fill`
+            definition left the entire right-hand side of a wide monitor
+            empty, because only four cards exist to fill it. */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          {cards.map(({ role, label, icon, accent }, i) => (
+            <StatCard
+              key={role}
+              index={i}
+              icon={icon}
+              label={label}
+              value={countLoading ? '…' : String(roleCounts[role] ?? 0)}
+              accent={accent}
+              illustration={<CardGlyph name={icon} />}
+            />
           ))}
         </div>
 
         {/* Browse CTA */}
         <div style={{
-          background: 'var(--bg)', border: '1px dashed var(--border)', borderRadius: 14,
+          background: 'var(--bg)', border: '1px dashed var(--border2)', borderRadius: 14,
           padding: '20px 24px', textAlign: 'center', boxShadow: 'var(--shadow)',
         }}>
           <div style={{ fontSize: 13, color: 'var(--txt2)', marginBottom: 12 }}>
-            Individual user profiles dekhte "Browse" click koro
+            Open the Browse tab to see each individual user profile.
           </div>
           <button
             onClick={() => setRoleFilter('browse')}
@@ -504,7 +499,7 @@ export default function AdminUsers({
               background: 'var(--primary)', color: '#fff',
               border: 'none', borderRadius: 10, padding: '10px 24px',
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              boxShadow: '0 3px 12px rgba(22,163,74,0.35)',
+              boxShadow: '0 3px 12px rgba(37,99,235,0.32)',
               fontFamily: 'inherit',
             }}
           >
@@ -540,7 +535,7 @@ export default function AdminUsers({
           padding: '8px 16px', borderRadius: 24,
           fontSize: 13, fontWeight: 700,
         }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#047857', display: 'inline-block' }} />
           {total} Total Users
         </div>
       </div>
@@ -557,7 +552,7 @@ export default function AdminUsers({
             const isActive = roleFilter === r;
             const countMap = { all: roleCounts._total, browse: null, teacher: roleCounts.teacher, allAdmins: allAdminsCount };
             const count = countMap[r] ?? null;
-            const roleColor = { all: '#34d399', browse: '#a78bfa', teacher: '#34d399', admin: '#60a5fa', allAdmins: '#60a5fa' }[r] || '#94a3b8';
+            const roleColor = { all: '#047857', browse: '#7c3aed', teacher: '#047857', admin: '#2563eb', allAdmins: '#2563eb' }[r] || '#64748b';
             return (
               <button
                 key={r}
