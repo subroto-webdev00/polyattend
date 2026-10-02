@@ -163,15 +163,10 @@ export default function AppShell({ navItems, children }) {
           )}
 
           <div className="top-nav-right">
-            <button
-              className="menu-btn top-nav-bell"
-              onClick={() => router.push(navItems.find((n) => /holiday/i.test(n.label || ''))?.path || '/admin')}
-              aria-label="Notifications"
-              title="Notifications"
-            >
-              <Icon name="bell" size={19} />
-            </button>
-
+            {/* The bell was removed. It was not a notification feed: clicking it
+                quietly routed to whatever nav item happened to match /holiday/i,
+                falling back to /admin — so the icon implied alerts that do not
+                exist and sent an Admin somewhere unrelated to a notification. */}
             <button
               className="top-nav-user"
               onClick={() => setShowLogoutConfirm(true)}

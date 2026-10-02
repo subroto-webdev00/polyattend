@@ -213,7 +213,10 @@ export default function TeacherDashboard() {
         <Panel
           title="Today's Classes"
           icon="calendar"
-          action={<ViewAll onClick={() => router.push('/teacher/sessions')}>View All</ViewAll>}
+          // Class Report is where the full list of classes taken lives, with
+          // subject, department, shift and time. /teacher/sessions is the
+          // teacher's own session history, which is not the same thing.
+          action={<ViewAll onClick={() => router.push('/teacher/class-report')}>View All</ViewAll>}
         >
           {todayClasses.length === 0 ? (
             <EmptyState

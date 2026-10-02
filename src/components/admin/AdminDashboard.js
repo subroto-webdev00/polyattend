@@ -194,7 +194,11 @@ export default function AdminDashboard() {
         <Panel
           title="Today's Classes"
           icon="calendar"
-          action={<ViewAll onClick={() => router.push('/admin/reports')}>View All</ViewAll>}
+          // The panel lists today's classes, and Class Report is the page that
+          // lists every class taken with its time — so that is where "View All"
+          // belongs. It used to point at /admin/reports, which is a PDF/Excel
+          // export screen with no class list on it at all.
+          action={<ViewAll onClick={() => router.push('/admin/missed-classes')}>View All</ViewAll>}
         >
           {todayClasses.length === 0 ? (
             <EmptyState

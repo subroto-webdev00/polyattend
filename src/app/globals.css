@@ -526,22 +526,9 @@ body::after {
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
-/* Notification bell. The red dot sits on its top-right corner. */
-.top-nav-bell {
-  position: relative;
-}
-
-.top-nav-bell::after {
-  content: '';
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--danger);
-  border: 1.5px solid #ffffff;
-}
+/* The notification bell and its unread dot were removed from the top bar. The
+   rules are kept deleted here rather than left orphaned: they only styled the
+   button that no longer exists. */
 
 /* Signed-in user block: avatar, name over role, chevron. */
 .top-nav-user {
@@ -682,6 +669,19 @@ body::after {
     display: none;
   }
 
+  /* Only ONE hamburger on a phone. The left burger opens the sidebar drawer
+     (the sidebar is off-canvas below 768px), while the right one collapses the
+     sidebar — which is already invisible here, so pressing it did nothing
+     visible. Both were rendering because their show/hide rules lived only in
+     the min-width:768px block above, leaving sub-768px with no rule at all. */
+  .top-nav-burger-desktop {
+    display: none;
+  }
+
+  .top-nav-burger-mobile {
+    display: flex;
+  }
+
   .bottom-nav {
     display: flex;
   }
@@ -722,6 +722,12 @@ body::after {
   .top-nav-burger-mobile {
     display: none;
   }
+
+  /* The desktop burger must not appear on a phone. Both burgers used to have a
+     rule ONLY inside this min-width:768px block, so below 768px neither was
+     hidden and the phone rendered two identical hamburgers — one opening the
+     sidebar drawer, one collapsing an already-hidden sidebar. Mobile now hides
+     the desktop burger explicitly, before this block is ever reached. */
 
   .bottom-nav {
     display: none;
