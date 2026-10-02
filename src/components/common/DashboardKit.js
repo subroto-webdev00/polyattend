@@ -310,10 +310,18 @@ export function AreaChart({ data, height = 210, unit = '%' }) {
   const x = (i) => padL + (data.length === 1 ? innerW / 2 : (i * innerW) / (data.length - 1));
   const y = (v) => padT + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
 
+  // `value: null` means "no class on that day", not 0%. Those points are dropped
+  // rather than passed to y(), where they would produce NaN and corrupt the
+  // whole path. With at least one real day left the line spans those days
+  // instead of dipping to the floor.
+  const points = data
+    .map((d, i) => ({ ...d, value: d.value == null ? null : d.value, i }))
+    .filter((d) => d.value != null);
+
   // Catmull-Rom → cubic bezier, so the line curves through every point the way
   // the reference does instead of showing hard corners.
   const line = (() => {
-    const pts = data.map((d, i) => [x(i), y(d.value)]);
+    const pts = points.map((d) => [x(d.i), y(d.value)]);
     if (pts.length < 2) return '';
     let d = `M ${pts[0][0]} ${pts[0][1]}`;
     for (let i = 0; i < pts.length - 1; i++) {
@@ -331,7 +339,7 @@ export function AreaChart({ data, height = 210, unit = '%' }) {
   })();
 
   const area = line
-    ? `${line} L ${x(data.length - 1)} ${padT + innerH} L ${x(0)} ${padT + innerH} Z`
+    ? `${line} L ${x(points[points.length - 1].i)} ${padT + innerH} L ${x(points[0].i)} ${padT + innerH} Z`
     : '';
 
   // Four or five gridlines, always stepping on a round 5/10 boundary.
@@ -346,6 +354,24 @@ export function AreaChart({ data, height = 210, unit = '%' }) {
   })();
 
   const hp = hover != null ? data[hover] : null;
+
+  // Nothing to plot: no class was held on any of the days shown. Say so rather
+  // than drawing an empty grid with no explanation.
+  if (points.length === 0) {
+    return (
+      <div ref={wrapRef} style={{
+        height, display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: 6, textAlign: 'center',
+      }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--txt2)' }}>
+          No class was held in this period
+        </span>
+        <span style={{ fontSize: 11.5, color: 'var(--txt3)' }}>
+          The attendance rate appears once a teacher takes a class.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={wrapRef}>
@@ -375,17 +401,20 @@ export function AreaChart({ data, height = 210, unit = '%' }) {
 
         {hp && <line x1={x(hover)} y1={padT} x2={x(hover)} y2={padT + innerH} stroke="#2563eb" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />}
 
-        {data.map((d, i) => (
-          <circle key={d.label + i} cx={x(i)} cy={y(d.value)} r={hover === i ? 5 : 3.6}
+        {/* Points and dots come from `points` (null-valued days excluded); the
+            x-axis labels keep every day so the weekday scale stays intact. */}
+        {points.map((d) => (
+          <circle key={d.label + d.i} cx={x(d.i)} cy={y(d.value)} r={hover === d.i ? 5 : 3.6}
             fill="#ffffff" stroke="#2563eb" strokeWidth="2.4" />
         ))}
 
         {data.map((d, i) => (
-          <text key={'t' + i} x={x(i)} y={H - 7} textAnchor="middle" fontSize="10.5" fill="#94a3b8">{d.label}</text>
+          <text key={'t' + i} x={x(i)} y={H - 7} textAnchor="middle" fontSize="10.5"
+            fill={d.value == null ? '#cbd5e1' : '#94a3b8'}>{d.label}</text>
         ))}
 
         {/* Invisible hit columns drive the hover state. */}
-        {data.map((_, i) => (
+        {data.map((d, i) => (
           <rect
             key={'h' + i}
             x={x(i) - innerW / (data.length * 2 || 1)}
@@ -393,7 +422,7 @@ export function AreaChart({ data, height = 210, unit = '%' }) {
             width={innerW / (data.length || 1)}
             height={innerH}
             fill="transparent"
-            onMouseEnter={() => setHover(i)}
+            onMouseEnter={() => (d.value != null ? setHover(i) : setHover(null))}
           />
         ))}
       </svg>

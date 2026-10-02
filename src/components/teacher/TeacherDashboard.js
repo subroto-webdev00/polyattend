@@ -116,12 +116,10 @@ export default function TeacherDashboard() {
         value: total ? Math.round((present / total) * 100) : null,
       });
     }
-    let last = avgAtt;
-    return days.map((d) => {
-      if (d.value == null) return { ...d, value: last };
-      last = d.value;
-      return d;
-    });
+    // A day with no Session stays null. Carrying the previous day's rate across
+    // it invented data: a day with no class looked identical to a day where
+    // every student was absent. AreaChart draws a break instead.
+    return days;
   })();
 
   const todayClasses = sessions

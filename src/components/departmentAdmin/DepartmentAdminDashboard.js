@@ -71,11 +71,6 @@ export default function DepartmentAdminDashboard() {
 
   // 7-day attendance series, from this department's own sessions.
   const weekSeries = (() => {
-    const overall = (() => {
-      const p = sessions.reduce((s, x) => s + (x.presentCount || 0), 0);
-      const t = sessions.reduce((s, x) => s + (x.totalStudents || 0), 0);
-      return t ? Math.round((p / t) * 100) : 0;
-    })();
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -86,15 +81,12 @@ export default function DepartmentAdminDashboard() {
       const total = own.reduce((s, x) => s + (x.totalStudents || 0), 0);
       days.push({
         label: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        value: total ? Math.round((present / total) * 100) : null,
+        value: total > 0 ? Math.round((present / total) * 100) : null,
       });
     }
-    let last = overall;
-    return days.map((d) => {
-      if (d.value == null) return { ...d, value: last };
-      last = d.value;
-      return d;
-    });
+    // Days without a Session stay null rather than inheriting the previous
+    // day's rate, which would make "no class" look like "everyone absent".
+    return days;
   })();
 
   const statConfigs = [

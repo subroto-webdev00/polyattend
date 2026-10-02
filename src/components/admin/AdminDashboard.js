@@ -100,6 +100,11 @@ export default function AdminDashboard() {
     return t ? Math.round((p / t) * 1000) / 10 : 0;
   })();
 
+  // A day with no Session must NOT be drawn as 0% attendance. That conflated
+  // "no class was held" with "every student was absent", which is the
+  // difference between an empty timetable and a failing class. This used to
+  // carry the previous day's number forward into those gaps, inventing data.
+  // Such a day is now `value: null` and AreaChart leaves a break in the line.
   const weekSeries = (() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -111,15 +116,10 @@ export default function AdminDashboard() {
       const total = own.reduce((s, x) => s + (x.totalStudents || 0), 0);
       days.push({
         label: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        value: total ? Math.round((present / total) * 100) : null,
+        value: total > 0 ? Math.round((present / total) * 100) : null,
       });
     }
-    let last = rateAll;
-    return days.map((d) => {
-      if (d.value == null) return { ...d, value: last };
-      last = d.value;
-      return d;
-    });
+    return days;
   })();
 
   // Today's classes — anything that started today, most recent first.
@@ -189,6 +189,8 @@ export default function AdminDashboard() {
           action={<RangeSelect />}
         >
           <AreaChart data={weekSeries} />
+          {/* AreaChart already handles "nothing to plot" internally, so there
+              is no duplicate empty state here. */}
         </Panel>
 
         <Panel
