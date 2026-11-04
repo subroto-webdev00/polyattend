@@ -9,6 +9,7 @@ import {
   StatGrid, StatCard, CardGlyph,
   Panel, ListRow, EmptyState, ViewAll, QuickActions, SubjectOverview, AreaChart,
 } from '@/components/common/DashboardKit';
+import NoticeBoard from '@/components/common/NoticeBoard';
 
 const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -211,6 +212,8 @@ export default function DepartmentAdminDashboard() {
         limit={4}
         action={<ViewAll onClick={() => router.push('/departmentAdmin/teachers')}>View All Subjects</ViewAll>}
       />
+
+      <NoticeBoard />
     </DashboardPage>
   );
 }

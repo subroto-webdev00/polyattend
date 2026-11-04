@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
+import { useAuth } from '@/context/AuthContext';
 import Icon from '@/components/common/Icon';
 import toast from 'react-hot-toast';
 import PersonCard, { PersonCardGrid } from '@/components/common/PersonCard';
@@ -26,6 +27,7 @@ const getRecordId = record => record?.id || record?._id;
 // screen is for seeing the Department's Teachers and attaching Subjects to
 // them.
 export default function TeacherManagement() {
+  const { user } = useAuth();
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +54,7 @@ export default function TeacherManagement() {
   const openAssign = (teacher) => {
     setAssignTarget(teacher);
     // Only asked when the Teacher has no shift yet; otherwise it is reused.
-    setAssignForm({ subjectName: '', subjectCode: '', semester: null, section: '', shift: teacher?.shift || '' });
+    setAssignForm({ subjectName: '', subjectCode: '', semester: null, section: '', shift: teacher?.shift || user?.shift || '' });
   };
 
   const handleAssign = async () => {

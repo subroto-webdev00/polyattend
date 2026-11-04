@@ -36,12 +36,15 @@ export async function PUT(request, { params }) {
       // for people inside their own Department.
       const target = await prisma.user.findUnique({
         where: { id },
-        select: { id: true, role: true, departmentId: true },
+        select: { id: true, role: true, departmentId: true, shift: true },
       });
       if (!target) {
         return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
       }
-      const inScope = target.departmentId === auth.user.departmentId
+      // A Teacher of the other shift is not this Department Admin's to manage.
+      const wrongShiftTeacher = target.role === 'teacher' && auth.user.shift && target.shift && target.shift !== auth.user.shift;
+      const inScope = !wrongShiftTeacher
+        && target.departmentId === auth.user.departmentId
         && SEMESTER_ADMIN_MANAGABLE_ROLES.includes(target.role);
       if (!inScope) {
         return NextResponse.json({ success: false, message: 'You cannot edit a user outside your scope' }, { status: 403 });
@@ -87,7 +90,9 @@ export async function DELETE(request, { params }) {
       // test any more — Teachers are no longer created with a shift, so
       // requiring a match hid every Teacher who had not been assigned a
       // Subject yet.
-      const inScope = target.departmentId === auth.user.departmentId
+      const wrongShiftTeacher = target.role === 'teacher' && auth.user.shift && target.shift && target.shift !== auth.user.shift;
+      const inScope = !wrongShiftTeacher
+        && target.departmentId === auth.user.departmentId
         && SEMESTER_ADMIN_MANAGABLE_ROLES.includes(target.role);
       if (!inScope) {
         return NextResponse.json({ success: false, message: 'You cannot delete a user outside your scope' }, { status: 403 });

@@ -17,9 +17,28 @@ export function comparePassword(plain, hashed) {
   return bcrypt.compare(plain, hashed);
 }
 
+// Every Semester a diploma programme runs.
+const ALL_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+// A Department Admin is department-wide: they manage every Semester in their
+// Department, not the single Semester their row happens to carry. Older rows
+// were created before that was the rule and hold either no array or a one-entry
+// one, which made the Promotion page render "No Semester is assigned to you"
+// and the semester tabs collapse to one — even though the admin could in fact
+// see and promote students in all eight.
+//
+// So the grant is re-derived from the ROLE here rather than trusted from the
+// column, and the column is only used as a sanity check. Returning all eight
+// is not a privilege escalation: every department-admin API route independently
+// re-checks the caller's own department and shift before returning anything.
 export function normalizeDepartmentAdmin(user) {
-  if (user?.role === 'departmentAdmin' && (!user.semesters?.length) && user.semester) {
-    user.semesters = [user.semester];
+  if (user?.role === 'departmentAdmin') {
+    user.semesters = [...ALL_SEMESTERS];
+    // `semester` is kept in step so any consumer still reading the singular
+    // column agrees with the array rather than contradicting it.
+    if (!user.semester || !ALL_SEMESTERS.includes(Number(user.semester))) {
+      user.semester = 1;
+    }
   }
   return user;
 }

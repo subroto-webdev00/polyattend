@@ -10,11 +10,8 @@ export const dynamic = 'force-dynamic';
 // There is deliberately NO POST here. Creating a Teacher is a Super Admin
 // action, so this route is read-only apart from /assign-subject.
 //
-// The list is department-wide and completely automatic: the Department comes
-// from the caller's own account and there is no filter parameter to set. The
-// old query also pinned `shift`, but Teachers are no longer created with a
-// shift, so pinning it would hide most of them — a Teacher with no shift yet
-// has no shift to match.
+// The list is scoped automatically to the caller's own Department AND Shift;
+// there is no filter parameter to set.
 export async function GET(request) {
   const auth = await requireAuth(request, ['departmentAdmin']);
   if (auth.error) return auth.error;
@@ -29,8 +26,18 @@ export async function GET(request) {
       });
     }
 
+    // A Department Admin heads ONE shift (Morning or Day) of the Department, and
+    // the Super Admin creates Morning and Day Teachers separately, so the list
+    // shows only Teachers of the caller's own shift. A Teacher who has no shift
+    // yet (created before shifts were required) stays visible so they can still
+    // be given a Subject; they adopt the shift of that first Subject.
+    const shift = auth.user.shift;
     const teacherRows = await prisma.user.findMany({
-      where: { role: 'teacher', departmentId },
+      where: {
+        role: 'teacher',
+        departmentId,
+        ...(shift && { OR: [{ shift }, { shift: null }] }),
+      },
       select: {
         id: true, name: true, email: true, role: true, mobile: true,
         departmentId: true, departmentCode: true, shift: true,

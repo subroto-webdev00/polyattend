@@ -50,49 +50,84 @@ export function DashboardPage({ children }) {
 }
 
 // ── Header: greeting on the left, date + time on the right ────────────────
+// Rendered as a card rather than bare text on the canvas. The greeting, the
+// scope chips and the clock are all "context about right now", so they belong
+// in one surface instead of floating above the stat tiles as loose headings.
+//
 // `chips` renders the signed-in person's own scope (department, shift,
 // semester, …) directly under the subtitle, so they never have to open a
 // profile page to confirm which department or shift they are looking at.
 export function DashboardHeader({ greeting, subtitle, name, now, chips = [] }) {
   const visible = chips.filter(Boolean);
   return (
-    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-[26px] sm:text-[30px] font-extrabold text-slate-900 tracking-tight leading-tight">
-          {greeting}{name ? `, ${name}` : ''} <span aria-hidden>👋</span>
-        </h1>
-        {subtitle && <p className="text-[13.5px] text-slate-500 mt-1">{subtitle}</p>}
-        {visible.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap mt-2.5">
-            {visible.map((chip, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-600"
-              >
-                {chip.icon && <Icon name={chip.icon} size={13} className="text-slate-400 shrink-0" />}
-                <span className="text-slate-400 font-medium">{chip.label}</span>
-                <span className="text-slate-800">{chip.value}</span>
-              </span>
-            ))}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className={`${CARD} relative p-5 sm:p-6`}
+    >
+      {/* Soft blue wash bleeding in from the top-right corner. Purely decorative,
+          so it is hidden from assistive tech and never intercepts clicks. */}
+      <div
+        aria-hidden
+        className="absolute top-0 right-0 h-full w-1/2 pointer-events-none select-none"
+        style={{
+          background: 'radial-gradient(120% 100% at 100% 0%, rgba(37,99,235,0.07) 0%, rgba(37,99,235,0) 70%)',
+        }}
+      />
+
+      <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+        <div className="min-w-0">
+          {/* Greeting icon tile, matching the stat tiles' icon-square shape so
+              the two read as siblings rather than unrelated decoration. */}
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 grid place-items-center shrink-0">
+              <Icon name="dashboard" size={19} />
+            </span>
+            <h1 className="text-[24px] sm:text-[28px] font-extrabold text-slate-900 tracking-tight leading-tight">
+              {greeting}{name ? `, ${name}` : ''} <span aria-hidden>👋</span>
+            </h1>
           </div>
-        )}
+
+          {subtitle && <p className="text-[13.5px] text-slate-500 mt-2.5">{subtitle}</p>}
+
+          {visible.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap mt-3">
+              {visible.map((chip, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12px] font-semibold text-slate-600"
+                >
+                  {chip.icon && <Icon name={chip.icon} size={13} className="text-slate-400 shrink-0" />}
+                  <span className="text-slate-400 font-medium">{chip.label}</span>
+                  <span className="text-slate-800">{chip.value}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {now && <DateTimeBlock now={now} />}
       </div>
-      {now && <DateTimeBlock now={now} />}
-    </div>
+    </motion.div>
   );
 }
 
 // The calendar-icon + date line with the clock underneath, as on the reference.
+// Sits in its own tinted sub-panel so it reads as a distinct block inside the
+// header card instead of drifting against the white background.
 export function DateTimeBlock({ now }) {
   const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return (
-    <div className="shrink-0 lg:text-right">
-      <div className="flex items-center gap-2 justify-start lg:justify-end">
-        <Icon name="calendar" size={15} className="text-slate-400 shrink-0" />
-        <span className="text-[13px] text-slate-500 font-medium">{date}</span>
+    <div className="shrink-0">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 lg:text-right">
+        <div className="flex items-center gap-2 justify-start lg:justify-end">
+          <Icon name="calendar" size={15} className="text-slate-400 shrink-0" />
+          <span className="text-[13px] text-slate-500 font-medium">{date}</span>
+        </div>
+        <div className="text-[22px] font-bold text-slate-900 tabular-nums mt-0.5">{time}</div>
       </div>
-      <div className="text-[22px] font-bold text-slate-900 tabular-nums mt-0.5">{time}</div>
     </div>
   );
 }

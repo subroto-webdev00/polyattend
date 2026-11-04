@@ -182,6 +182,39 @@ body::after {
   gap: 12px;
   padding: 22px 18px 16px;
   border-bottom: 1px solid var(--border);
+  /* The logo is a real <button> so it is keyboard reachable, but it must look
+     exactly like the plain div it replaced. Browsers give buttons their own
+     background, border, font and text-align, which would break the layout, so
+     every one of those is reset here. The white background and tighter padding
+     inside the glowing frame come from `.sidebar-logo-frame .sidebar-logo`
+     further down, which is more specific and therefore wins. */
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: left;
+  text-transform: none;
+  cursor: pointer;
+  transition: filter 0.18s ease;
+}
+
+.sidebar-logo:hover {
+  filter: brightness(0.985);
+}
+
+/* Keyboard users get a visible ring. Pointer users don't: the hover treatment
+   above already communicates the affordance, and a ring on every click looks
+   like an error state. */
+.sidebar-logo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -3px;
+  border-radius: 14.5px;
 }
 
 /* ── Animated glowing gradient frame around the logo ──────────────

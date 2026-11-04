@@ -12,6 +12,7 @@ import {
   Panel, EmptyState, SubjectCard, SessionTable,
   StatusPill, QuickActions, ViewAll, AreaChart, ClassRow,
 } from '@/components/common/DashboardKit';
+import NoticeBoard from '@/components/common/NoticeBoard';
 
 function todayISO() {
   const d = new Date();
@@ -291,12 +292,14 @@ export default function TeacherDashboard() {
         <QuickActions
           actions={[
             { icon: 'check', label: 'Take Attendance', accent: 'emerald', onClick: () => router.push('/teacher/attendance') },
-            { icon: 'users', label: 'Add Student', accent: 'blue', onClick: () => router.push('/teacher/students') },
+            { icon: 'users', label: 'View Students', accent: 'blue', onClick: () => router.push('/teacher/students') },
             { icon: 'chart', label: 'View Reports', accent: 'purple', onClick: () => router.push('/teacher/reports') },
-            { icon: 'book', label: 'Manage Classes', accent: 'amber', onClick: () => router.push('/teacher/sessions') },
+            { icon: 'book', label: 'Session History', accent: 'amber', onClick: () => router.push('/teacher/sessions') },
           ]}
         />
       </div>
+
+      <NoticeBoard />
     </DashboardPage>
   );
 }

@@ -127,6 +127,7 @@ model User {
   addedPreApprovals    StudentPreApproval[]  @relation("AddedByUser")
   usedPreApprovals     StudentPreApproval[]  @relation("UsedByUser")
   pendingRegistrations PendingRegistration[]
+  notices              Notice[]
 
   @@index([role, departmentId, shift, semester])
   @@index([role, departmentId, shift, semester, section])
@@ -354,4 +355,30 @@ model IgnoredMiss {
   @@unique([subjectId, date])
   @@index([date])
   @@map("ignored_misses")
+}
+
+enum NoticeAudience {
+  ALL
+  DEPARTMENT_ADMIN
+  TEACHER
+  STUDENT
+}
+
+model Notice {
+  id          String         @id @default(uuid())
+  title       String
+  content     String
+  imageUrl    String?        @map("image_url")
+  audience    NoticeAudience @default(ALL)
+  departmentId String?       @map("department_id")
+  isActive    Boolean        @default(true) @map("is_active")
+  createdById String         @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([isActive, audience])
+  @@index([createdAt(sort: Desc)])
+  @@map("notices")
 }

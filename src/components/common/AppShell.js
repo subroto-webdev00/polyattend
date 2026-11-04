@@ -1,10 +1,13 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { blockIfSessionActive } from '@/utils/sessionGuard';
+import api from '@/utils/api';
 import Icon from './Icon';
 import Modal from './Modal';
+import NoticeModal from './NoticeModal';
+import { noticesPath } from './noticeMeta';
 
 const ROLE_LABELS = {
   admin: 'Admin',
@@ -26,6 +29,10 @@ export default function AppShell({ navItems, children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [query, setQuery] = useState('');
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notices, setNotices] = useState([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [activeNotice, setActiveNotice] = useState(null);
 
   // Every role already has a full "Search Profile" screen backed by the
   // lookup APIs, so the top-bar field doesn't reimplement search — it hands
@@ -62,11 +69,32 @@ export default function AppShell({ navItems, children }) {
     setShowLogoutConfirm(true);
   };
 
+  // Where the logo sends you. Read from the nav itself rather than hard-coded
+  // as `/admin` or `/student`: the logo has to land each role on ITS OWN home,
+  // and a role whose root path ever changes should not need this edited too.
+  // Falls back to the first real nav entry if the root isn't listed.
+  const homePath = (() => {
+    const root = `/${user?.role}`;
+    const match = navItems.find((n) => !n.section && n.path === root);
+    if (match) return match.path;
+    return navItems.find((n) => !n.section)?.path || '/';
+  })();
+
   const confirmLogout = () => {
     setShowLogoutConfirm(false);
     logout();
     router.push('/login');
   };
+
+  // Fetch notices for the notification bell (all roles see notices meant for them)
+  useEffect(() => {
+    if (!user) return;
+    setNotifLoading(true);
+    api.get('/notices')
+      .then(res => setNotices(res.data.notices || []))
+      .catch(() => setNotices([]))
+      .finally(() => setNotifLoading(false));
+  }, [user]);
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
   // The top bar shows a single letter; the sidebar footer keeps the full pair.
@@ -77,7 +105,13 @@ export default function AppShell({ navItems, children }) {
       {/* SIDEBAR */}
       <nav className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="sidebar-logo-frame">
-          <div className="sidebar-logo">
+          <button
+            className="sidebar-logo"
+            type="button"
+            onClick={() => handleNav(homePath)}
+            aria-label={`${ROLE_LABELS[user?.role] || 'Account'} home`}
+            title="Go to home"
+          >
             <div className="sidebar-logo-icon">
               <Icon name="school" size={18} />
             </div>
@@ -85,7 +119,7 @@ export default function AppShell({ navItems, children }) {
               <div className="sidebar-logo-text">PolyAttend</div>
               <div className="sidebar-logo-sub">Attendance System</div>
             </div>
-          </div>
+          </button>
         </div>
 
         <div className="sidebar-nav">
@@ -163,10 +197,22 @@ export default function AppShell({ navItems, children }) {
           )}
 
           <div className="top-nav-right">
-            {/* The bell was removed. It was not a notification feed: clicking it
-                quietly routed to whatever nav item happened to match /holiday/i,
-                falling back to /admin — so the icon implied alerts that do not
-                exist and sent an Admin somewhere unrelated to a notification. */}
+            {/* Notification bell — shows notices for the signed-in user's role */}
+            <button
+              className="top-nav-bell"
+              onClick={() => setNotifOpen(!notifOpen)}
+              title="Notifications"
+              aria-label="Notifications"
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--txt1)' }}
+            >
+              <Icon name="bell" size={18} />
+              {notices.length > 0 && (
+                <span style={{ position: 'absolute', top: 6, right: 6, width: 10, height: 10, background: '#ef4444', color: '#fff', borderRadius: '50%', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                  {notices.length > 9 ? '9+' : notices.length}
+                </span>
+              )}
+            </button>
+
             <button
               className="top-nav-user"
               onClick={() => setShowLogoutConfirm(true)}
@@ -193,6 +239,71 @@ export default function AppShell({ navItems, children }) {
           </div>
         </header>
 
+        {/* Notification dropdown panel */}
+        {notifOpen && (
+          <div
+            className="notif-dropdown"
+            style={{
+              position: 'fixed', top: 60, right: 10, width: 340,
+              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+              boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 50,
+              overflow: 'hidden', display: 'flex', flexDirection: 'column',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 'bold', fontSize: 14, color: '#0f172a' }}>Notifications</span>
+              <button onClick={() => setNotifOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}>&times;</button>
+            </div>
+            <div style={{ maxHeight: 400, overflowY: 'auto', padding: 8 }}>
+              {notifLoading ? (
+                <div style={{ padding: 20, textAlign: 'center', color: '#64748b', fontSize: 13 }}>Loading…</div>
+              ) : notices.length === 0 ? (
+                <div style={{ padding: 20, textAlign: 'center', color: '#64748b', fontSize: 13 }}>No notifications</div>
+              ) : (
+                notices.map(n => (
+                  <div
+                    key={n.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { setNotifOpen(false); setActiveNotice(n); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { setNotifOpen(false); setActiveNotice(n); } }}
+                    style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', gap: 10 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {n.imageUrl && (
+                      <img src={n.imageUrl} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, flexShrink: 0, border: '1px solid #e2e8f0' }} />
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: '600', fontSize: 13, color: '#0f172a' }}>{n.title}</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.content}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}>
+                        {new Date(n.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => { setNotifOpen(false); handleNav(noticesPath(user?.role)); }}
+              style={{ width: '100%', padding: '10px 16px', border: 'none', borderTop: '1px solid #f1f5f9', background: '#f8fafc', color: '#2563eb', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+            >
+              সব নোটিস দেখুন
+            </button>
+          </div>
+        )}
+
+        {/* Close dropdown when clicking outside */}
+        {notifOpen && (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 49 }}
+            onClick={() => setNotifOpen(false)}
+          />
+        )}
+
         {/* CONTENT */}
         <main className="shell-content">
           {children}
@@ -208,6 +319,8 @@ export default function AppShell({ navItems, children }) {
           ))}
         </nav>
       </div>
+
+      <NoticeModal notice={activeNotice} onClose={() => setActiveNotice(null)} />
 
       {/* Logout confirmation */}
       <Modal open={showLogoutConfirm} onClose={() => setShowLogoutConfirm(false)}>

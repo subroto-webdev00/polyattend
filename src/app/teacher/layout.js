@@ -4,6 +4,7 @@ import AppShell from '@/components/common/AppShell';
 
 const navItems = [
   { label: 'Dashboard', icon: 'dashboard', path: '/teacher' },
+  { label: 'Notice', icon: 'megaphone', path: '/teacher/notices' },
   { label: 'Subject', icon: 'book', path: '/teacher/subjects' },
   { label: 'Students', icon: 'users', path: '/teacher/students' },
   { label: 'Take Attendance', icon: 'clipboard', path: '/teacher/attendance' },

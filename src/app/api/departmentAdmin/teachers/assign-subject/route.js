@@ -64,6 +64,13 @@ export async function POST(request) {
         message: 'This Teacher belongs to another Department',
       }, { status: 403 });
     }
+    // Shift guard: a Department Admin only manages Teachers of their own shift.
+    if (auth.user.shift && teacher.shift && teacher.shift !== auth.user.shift) {
+      return NextResponse.json({
+        success: false,
+        message: 'This Teacher belongs to the other shift',
+      }, { status: 403 });
+    }
     if (!teacher.isActive) {
       return NextResponse.json({
         success: false,
@@ -75,11 +82,18 @@ export async function POST(request) {
     // get one. Reuse theirs when they already have it; otherwise the Semester
     // Admin picks, because defaulting to Morning would file the Subject into
     // the wrong shift with no way for anyone to notice.
-    const requestedShift = shift || teacher.shift;
+    const requestedShift = teacher.shift || shift || auth.user.shift;
     if (!VALID_SHIFTS.includes(requestedShift)) {
       return NextResponse.json({ success: false, message: 'Select a Shift' }, { status: 400 });
     }
     const normalizedShift = normalizeShift(requestedShift);
+    // A Department Admin can only file Subjects into their own shift.
+    if (auth.user.shift && normalizedShift !== auth.user.shift) {
+      return NextResponse.json({
+        success: false,
+        message: 'You can only assign Subjects in your own shift',
+      }, { status: 403 });
+    }
 
     // One Teacher per Subject+Group slot. A Subject left behind by a deleted
     // Teacher is free to be reassigned.

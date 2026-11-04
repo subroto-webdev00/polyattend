@@ -11,6 +11,7 @@ import {
   StatGrid, StatCard, CardGlyph, ProgressRing,
   Panel, EmptyState, QuickActions, ViewAll, MetaChip,
 } from '@/components/common/DashboardKit';
+import NoticeBoard from '@/components/common/NoticeBoard';
 
 function greeting() {
   const h = new Date().getHours();
@@ -216,6 +217,8 @@ export default function StudentHome() {
           </Panel>
         </div>
       </div>
+
+      <NoticeBoard />
     </DashboardPage>
   );
 }

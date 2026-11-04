@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import NoticeBoard from '@/components/common/NoticeBoard';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 import {
   DashboardPage, DashboardLoading, DashboardHeader,
@@ -75,7 +76,6 @@ export default function AdminDashboard() {
           teachers: te.data.count || 0,
           subjects: allSubjects.length,
         });
-        // The month-ago figure is the current count minus what arrived since.
         setPrev({
           students: Math.max(0, (st.data.count || 0) - (stNew.data.newCount || 0)),
           teachers: Math.max(0, (te.data.count || 0) - (teNew.data.newCount || 0)),
@@ -309,6 +309,15 @@ export default function AdminDashboard() {
           ]}
         />
       </div>
+
+      {/* ── Notice (managed on its own page) ── */}
+      <Panel
+        title="Notice"
+        icon="megaphone"
+        action={<ViewAll onClick={() => router.push('/admin/notices')}>Manage Notices</ViewAll>}
+      >
+        <NoticeBoard bare />
+      </Panel>
     </DashboardPage>
   );
 }
