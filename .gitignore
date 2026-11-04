@@ -66,3 +66,4 @@ ios/**/build/
 ios/**/DerivedData/
 ios/Pods/
 ios/App/App/public/
+public/uploads/
