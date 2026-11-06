@@ -34,6 +34,18 @@ const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
+// Check if Cloudinary is properly configured
+function isCloudinaryConfigured() {
+  return Boolean(
+    CLOUDINARY_CLOUD_NAME &&
+    CLOUDINARY_API_KEY &&
+    CLOUDINARY_API_SECRET &&
+    CLOUDINARY_CLOUD_NAME !== 'image-poly' && // placeholder value
+    CLOUDINARY_API_KEY !== 'placeholder' &&
+    CLOUDINARY_API_SECRET !== 'placeholder'
+  );
+}
+
 // Role mapping
 const ROLE_TO_AUDIENCE = {
   admin: 'ADMIN',
@@ -101,7 +113,11 @@ async function saveImage(file) {
     };
   }
 
-  checkCloudinaryConfig();
+  if (!isCloudinaryConfigured()) {
+    throw {
+      userMessage: 'Image upload is not configured. Please post notice without image.',
+    };
+  }
 
   const timestamp = Math.floor(Date.now() / 1000);
 
@@ -397,8 +413,14 @@ export async function POST(request) {
     let imageUrl = data.imageUrl || null;
 
     if (data.file) {
-      savedImage = await saveImage(data.file);
-      imageUrl = savedImage;
+      try {
+        savedImage = await saveImage(data.file);
+        imageUrl = savedImage;
+      } catch (imgErr) {
+        // If image upload fails, still create the notice without image
+        console.warn('Image upload failed, creating notice without image:', imgErr?.userMessage || imgErr?.message);
+        // Don't fail the entire notice creation
+      }
     }
 
     const notice = await prisma.notice.create({
