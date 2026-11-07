@@ -97,25 +97,7 @@ function cloudinarySignature(params) {
 }
 
 // Upload image to Cloudinary
-async function saveImage(file) {
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    throw {
-      userMessage: 'শুধু JPG, PNG, WEBP বা GIF ছবি দেওয়া যাবে।',
-    };
-  }
-
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw {
-      userMessage: 'ছবির সাইজ সর্বোচ্চ ৫ MB হতে পারে।',
-    };
-  }
-
-  if (!isCloudinaryConfigured()) {
-    throw {
-      userMessage: 'Image upload is not configured. Please post notice without image.',
-    };
-  }
-
+async function uploadToCloudinary(file) {
   const timestamp = Math.floor(Date.now() / 1000);
 
   const params = {
@@ -162,6 +144,52 @@ async function saveImage(file) {
   }
 
   return result.secure_url;
+}
+
+// Keep the picture in the database as a data URL. Used whenever Cloudinary is
+// missing or rejects the upload, so a notice never loses its image just
+// because an external service is unavailable.
+const MAX_DATA_URL_CHARS = 3_000_000; // ~2.2 MB of binary
+
+async function fileToDataUrl(file) {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const dataUrl = `data:${file.type};base64,${buffer.toString('base64')}`;
+
+  if (dataUrl.length > MAX_DATA_URL_CHARS) {
+    throw {
+      userMessage: 'Image is too large. Please upload an image under 2 MB.',
+    };
+  }
+
+  return dataUrl;
+}
+
+// Store an image: try Cloudinary first, then fall back to the database.
+async function storeImage(file) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw {
+      userMessage: 'Only JPG, PNG, WEBP or GIF images are allowed.',
+    };
+  }
+
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw {
+      userMessage: 'Image size must be 5 MB or less.',
+    };
+  }
+
+  if (isCloudinaryConfigured()) {
+    try {
+      return await uploadToCloudinary(file);
+    } catch (error) {
+      console.warn(
+        'Cloudinary upload failed, storing image in database instead:',
+        error?.userMessage || error?.message || error
+      );
+    }
+  }
+
+  return fileToDataUrl(file);
 }
 
 // Extract Cloudinary public ID from URL
@@ -408,15 +436,17 @@ export async function POST(request) {
     }
 
     let imageUrl = data.imageUrl || null;
+    let warning = null;
 
     if (data.file) {
       try {
-        savedImage = await saveImage(data.file);
+        savedImage = await storeImage(data.file);
         imageUrl = savedImage;
       } catch (imgErr) {
-        // If image upload fails, still create the notice without image
-        console.warn('Image upload failed, creating notice without image:', imgErr?.userMessage || imgErr?.message);
-        // Don't fail the entire notice creation
+        // Last resort: publish the text notice without its picture, and tell
+        // the caller why instead of failing silently.
+        console.warn('Image could not be stored:', imgErr?.userMessage || imgErr?.message);
+        warning = imgErr?.userMessage || 'The image could not be saved.';
       }
     }
 
@@ -438,6 +468,7 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       notice,
+      warning,
     });
   } catch (error) {
     if (savedImage) {
@@ -515,10 +546,16 @@ export async function PUT(request) {
     }
 
     let imageUrl = existing.imageUrl;
+    let warning = null;
 
     if (data.file) {
-      savedImage = await saveImage(data.file);
-      imageUrl = savedImage;
+      try {
+        savedImage = await storeImage(data.file);
+        imageUrl = savedImage;
+      } catch (imgErr) {
+        console.warn('Image could not be stored:', imgErr?.userMessage || imgErr?.message);
+        warning = imgErr?.userMessage || 'The image could not be saved.';
+      }
     } else if (data.removeImage) {
       imageUrl = null;
     }
@@ -550,6 +587,7 @@ export async function PUT(request) {
     return NextResponse.json({
       success: true,
       notice,
+      warning,
     });
   } catch (error) {
     if (savedImage) {

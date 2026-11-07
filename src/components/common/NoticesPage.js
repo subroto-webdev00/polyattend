@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AUDIENCE_LABEL, AUDIENCE_STYLE } from '@/components/common/noticeMeta';
 import ImageViewer from '@/components/common/ImageViewer';
 import { DashboardPage, DashboardLoading, Panel } from '@/components/common/DashboardKit';
+import compressImage from '@/utils/compressImage';
 
 const EMPTY_FORM = { id: '', title: '', content: '', audience: 'ALL', departmentId: '', image: null, removeImage: false };
 const INPUT = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -76,7 +77,10 @@ export default function NoticesPage() {
     setSaving(true); setFormError('');
     try {
       const res = form.id ? await api.put('/notices', fd) : await api.post('/notices', fd);
-      if (res.data.success) { close(); await load(); }
+      if (res.data.success) {
+        if (res.data.warning) alert(res.data.warning);
+        close(); await load();
+      }
       else setFormError(res.data.message || 'সংরক্ষণ করা যায়নি।');
     } catch (err) {
       setFormError(err.response?.data?.message || 'সার্ভার এরর।');
@@ -168,8 +172,14 @@ export default function NoticesPage() {
                   if (!file) return;
                   if (file.size > 5 * 1024 * 1024) { setFormError('ছবির সাইজ সর্বোচ্চ ৫ MB।'); e.target.value = ''; return; }
                   setFormError('');
-                  setForm({ ...form, image: file, removeImage: false });
-                  setPreview(URL.createObjectURL(file));
+                  const url = URL.createObjectURL(file);
+                  setPreview(url);
+                  setForm(s => ({ ...s, image: file, removeImage: false }));
+                  // Shrink oversized photos in the browser so the upload fits
+                  // inside Vercel's 4.5 MB request limit.
+                  compressImage(file).then(small => {
+                    if (small !== file) setForm(s => ({ ...s, image: small }));
+                  });
                 }}
               />
               {preview && (
