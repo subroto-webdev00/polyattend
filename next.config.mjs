@@ -68,9 +68,12 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
+              "img-src 'self' data: blob: https://res.cloudinary.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com",
+              // ImageViewer downloads the picture by fetching it, so the
+              // host has to be allowed here too — otherwise the notice image
+              // renders but the zoom/download button fails.
+              "connect-src 'self' https://res.cloudinary.com https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

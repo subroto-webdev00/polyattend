@@ -436,18 +436,13 @@ export async function POST(request) {
     }
 
     let imageUrl = data.imageUrl || null;
-    let warning = null;
 
+    // An image that was attached but cannot be stored must fail the request
+    // loudly. Creating the notice anyway is how a post ended up with text and
+    // no picture, with nothing on screen to say why.
     if (data.file) {
-      try {
-        savedImage = await storeImage(data.file);
-        imageUrl = savedImage;
-      } catch (imgErr) {
-        // Last resort: publish the text notice without its picture, and tell
-        // the caller why instead of failing silently.
-        console.warn('Image could not be stored:', imgErr?.userMessage || imgErr?.message);
-        warning = imgErr?.userMessage || 'The image could not be saved.';
-      }
+      savedImage = await storeImage(data.file);
+      imageUrl = savedImage;
     }
 
     const notice = await prisma.notice.create({
@@ -468,7 +463,6 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       notice,
-      warning,
     });
   } catch (error) {
     if (savedImage) {
@@ -546,16 +540,10 @@ export async function PUT(request) {
     }
 
     let imageUrl = existing.imageUrl;
-    let warning = null;
 
     if (data.file) {
-      try {
-        savedImage = await storeImage(data.file);
-        imageUrl = savedImage;
-      } catch (imgErr) {
-        console.warn('Image could not be stored:', imgErr?.userMessage || imgErr?.message);
-        warning = imgErr?.userMessage || 'The image could not be saved.';
-      }
+      savedImage = await storeImage(data.file);
+      imageUrl = savedImage;
     } else if (data.removeImage) {
       imageUrl = null;
     }
@@ -587,7 +575,6 @@ export async function PUT(request) {
     return NextResponse.json({
       success: true,
       notice,
-      warning,
     });
   } catch (error) {
     if (savedImage) {

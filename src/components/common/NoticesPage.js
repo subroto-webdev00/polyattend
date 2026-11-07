@@ -77,10 +77,7 @@ export default function NoticesPage() {
     setSaving(true); setFormError('');
     try {
       const res = form.id ? await api.put('/notices', fd) : await api.post('/notices', fd);
-      if (res.data.success) {
-        if (res.data.warning) alert(res.data.warning);
-        close(); await load();
-      }
+      if (res.data.success) { close(); await load(); }
       else setFormError(res.data.message || 'সংরক্ষণ করা যায়নি।');
     } catch (err) {
       setFormError(err.response?.data?.message || 'সার্ভার এরর।');
