@@ -199,15 +199,14 @@ export default function AppShell({ navItems, children }) {
           <div className="top-nav-right">
             {/* Notification bell — shows notices for the signed-in user's role */}
             <button
-              className="top-nav-bell"
+              className={`top-nav-bell${notices.length > 0 ? ' has-notices' : ''}`}
               onClick={() => setNotifOpen(!notifOpen)}
               title="Notifications"
               aria-label="Notifications"
-              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--txt1)' }}
             >
-              <Icon name="bell" size={18} />
+              <img src="/bell.svg" alt="" width={22} height={22} />
               {notices.length > 0 && (
-                <span style={{ position: 'absolute', top: 6, right: 6, width: 10, height: 10, background: '#ef4444', color: '#fff', borderRadius: '50%', fontSize: '9px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                <span className="top-nav-bell-badge">
                   {notices.length > 9 ? '9+' : notices.length}
                 </span>
               )}
@@ -291,7 +290,7 @@ export default function AppShell({ navItems, children }) {
               onClick={() => { setNotifOpen(false); handleNav(noticesPath(user?.role)); }}
               style={{ width: '100%', padding: '10px 16px', border: 'none', borderTop: '1px solid #f1f5f9', background: '#f8fafc', color: '#2563eb', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
             >
-              সব নোটিস দেখুন
+              View all notices
             </button>
           </div>
         )}

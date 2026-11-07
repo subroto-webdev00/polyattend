@@ -627,6 +627,96 @@ body::after {
   flex-shrink: 0;
 }
 
+/* ===== NOTIFICATION BELL =====
+   The bell is the neon-green graphic in `public/bell.svg`. The button itself
+   stays invisible until there is something to see; `.has-notices` is only
+   added while at least one notice is waiting, and it lights a red ring that
+   keeps glowing around the button until the notices are cleared. */
+.top-nav-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  /* Only the background eases. The border deliberately has no transition:
+     the red signal must be painted the instant `has-notices` lands, not after
+     a frame of interpolation (a throttled/hidden tab can leave a transitioning
+     border sitting on its start colour indefinitely). */
+  transition: background 0.15s ease;
+}
+
+.top-nav-bell:hover {
+  background: var(--bg3);
+}
+
+.top-nav-bell img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  /* The SVG already carries its own glow filter; this drop-shadow keeps the
+     tube readable against the white top-nav bar. */
+  filter: drop-shadow(0 0 3px rgba(0, 230, 76, 0.6));
+}
+
+/* At least one notice is waiting — red border that keeps pulsing. */
+.top-nav-bell.has-notices {
+  border-color: #ef4444;
+  animation: noticeGlow 1.6s ease-in-out infinite;
+}
+
+@keyframes noticeGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(239, 68, 68, 0.5),
+      0 0 8px 1px rgba(239, 68, 68, 0.45);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(239, 68, 68, 0),
+      0 0 16px 4px rgba(239, 68, 68, 0.85);
+  }
+}
+
+.top-nav-bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  /* Deliberately tiny: the count is a hint, not the headline, so it stays
+     smaller than the icon instead of competing with it. */
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  background: #ef4444;
+  color: #fff;
+  border: 1.5px solid #fff;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Keep the red signal, drop the pulsing, for users who opt out of motion. */
+@media (prefers-reduced-motion: reduce) {
+  .top-nav-bell.has-notices {
+    animation: none;
+    box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.75);
+  }
+}
+
 @media (max-width: 640px) {
   .top-nav-user-text {
     display: none;

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Notifications">
+  <defs>
+    <linearGradient id="bellFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#63ffa8" />
+      <stop offset="1" stop-color="#00c853" />
+    </linearGradient>
+    <!-- A filled silhouette reads far better at 22px than a stroked outline,
+         so the neon comes from a soft halo behind the shape rather than from
+         a glow on the stroke itself. -->
+    <filter id="bellGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="1.5" result="b" />
+      <feMerge>
+        <feMergeNode in="b" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path
+    filter="url(#bellGlow)"
+    fill="url(#bellFill)"
+    stroke="#00a344"
+    stroke-width="0.9"
+    stroke-linejoin="round"
+    d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+  />
+</svg>
