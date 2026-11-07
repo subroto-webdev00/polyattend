@@ -39,10 +39,7 @@ function isCloudinaryConfigured() {
   return Boolean(
     CLOUDINARY_CLOUD_NAME &&
     CLOUDINARY_API_KEY &&
-    CLOUDINARY_API_SECRET &&
-    CLOUDINARY_CLOUD_NAME !== 'image-poly' && // placeholder value
-    CLOUDINARY_API_KEY !== 'placeholder' &&
-    CLOUDINARY_API_SECRET !== 'placeholder'
+    CLOUDINARY_API_SECRET
   );
 }
 
