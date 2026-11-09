@@ -2,7 +2,17 @@ import withSerwistInit from '@serwist/next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@prisma/client'],
+  // pdfkit 0.20 loads its built-in fonts through package.json's `imports`
+  // field (`#standard-fonts/Helvetica` -> `./js/standard-fonts/*.cjs`).
+  // Webpack cannot resolve those `#` specifiers, so it inlined pdfkit's code
+  // but left the requires as-is — and the file tracer then saw no pdfkit
+  // dependency at all (0 pdfkit entries in every report route's .nft.json).
+  // On Vercel that meant the lambda shipped without pdfkit's package.json or
+  // its font files, so EVERY PDF download failed with:
+  //   Cannot find module '#standard-fonts/Helvetica'
+  // Externalising pdfkit makes Node resolve it from node_modules against
+  // pdfkit's own package.json, and makes the tracer ship those files.
+  serverExternalPackages: ['@prisma/client', 'pdfkit'],
 
   // Build memory ceiling. "Collecting page data" spawns one worker per CPU,
   // and on a machine with a few GB free that fan-out is what gets the whole

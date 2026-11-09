@@ -1,5 +1,16 @@
 import PDFDocument from 'pdfkit';
 
+// pdfkit loads its built-in fonts lazily through ITS OWN package.json
+// `imports` field (`#standard-fonts/Helvetica` -> `js/standard-fonts/*.cjs`).
+// Webpack cannot resolve those `#` specifiers and the file tracer cannot
+// follow them either, so before this import every report route traced 0 font
+// files: the deployed lambda carried pdfkit's code but none of its fonts, and
+// every PDF download died with `Cannot find module '#standard-fonts/Helvetica'`.
+// The helper pulls in the two faces we use via pdfkit's `require` condition —
+// the very files its lazy loader asks for at runtime. Add a line there if a
+// report ever needs Times/Courier/Symbol.
+import './pdfkitFonts.cjs';
+
 // ── FEATURE: PDF download alongside Excel ──────────────────────────────────
 // Every place that already offers an Excel (.xlsx) report download now also
 // offers a PDF version, generated here with `pdfkit` (a pure-JS PDF library,
