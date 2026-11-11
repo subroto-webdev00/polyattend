@@ -40,6 +40,12 @@ export async function GET(request) {
     if (searchParams.get('semester')) where.semester = parseInt(searchParams.get('semester'));
     if (searchParams.get('section')) where.section = searchParams.get('section');
     if (searchParams.get('isActive') !== null) where.isActive = searchParams.get('isActive') !== 'false';
+    // Deleted Subjects are soft-deleted (`isActive: false`) so their Session
+    // and Attendance rows survive. Without this default they stayed in every
+    // list forever, which made Delete look like it never worked. Anyone who
+    // genuinely wants the inactive rows can still ask for them explicitly
+    // with `?isActive=false`.
+    else where.isActive = true;
     // Re-apply role scope after optional query filters so a Student or
     // scoped admin cannot widen their own dashboard by changing URL params.
     if (auth.user.role === 'student') {
@@ -61,7 +67,26 @@ export async function POST(request) {
   if (auth.error) return auth.error;
   try {
     const body = await request.json();
-    const subject = await prisma.subject.create({ data: { name: body.name, code: body.code, departmentId: body.departmentId, semester: parseInt(body.semester), section: body.section, shift: body.shift, teacherId: body.teacherId || null }, include: subjInclude });
+    const data = {
+      name: body.name,
+      code: body.code,
+      departmentId: body.departmentId,
+      semester: parseInt(body.semester),
+      section: body.section,
+      shift: body.shift,
+      teacherId: body.teacherId || null,
+    };
+    // A Department Admin may only ever create Subjects inside their own
+    // Department and Shift — the request body cannot widen that, exactly
+    // like the GET scope below and the assign-subject route.
+    if (auth.user.role === 'departmentAdmin') {
+      if (!auth.user.departmentId) {
+        return NextResponse.json({ success: false, message: 'Your account has no Department' }, { status: 400 });
+      }
+      data.departmentId = auth.user.departmentId;
+      if (auth.user.shift) data.shift = auth.user.shift;
+    }
+    const subject = await prisma.subject.create({ data, include: subjInclude });
     return NextResponse.json({ success: true, subject: normalizeSubject(subject) }, { status: 201 });
   } catch (error) { return errorResponse(error, 400); }
 }

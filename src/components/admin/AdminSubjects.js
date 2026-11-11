@@ -2,19 +2,26 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import Icon from '@/components/common/Icon';
+import Modal from '@/components/common/Modal';
+import toast from 'react-hot-toast';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
 // MISTAKE FIX: Admin could previously create/edit/delete Subjects
 // directly here, which bypassed the actual rule now in place — a Teacher
 // and their one Subject are only ever created together, by a Semester
-// Admin, through the invite flow. This page is now read-only: it exists
-// so Admin can see everything that exists, grouped by Department,
-// without being able to create a Subject with no Teacher behind it.
+// Admin, through the invite flow. This page is now read-only apart from
+// Delete: it exists so Admin can see everything that exists, grouped by
+// Department, without being able to create a Subject with no Teacher
+// behind it. Delete sits behind a confirmation dialog (no accidental
+// clicks) and is a soft delete — the Subject vanishes from every list
+// while its Session/Attendance history stays in the database.
 export default function AdminSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterDept, setFilterDept] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -29,6 +36,21 @@ export default function AdminSubjects() {
   };
 
   useEffect(load, [filterDept]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/subjects/${deleteTarget._id}`);
+      toast.success('Subject deleted');
+      setDeleteTarget(null);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Group subjects by Department first, then by Semester+Shift+Group
   // within it, so the page reads as one section per department.
@@ -84,6 +106,15 @@ export default function AdminSubjects() {
                         <div className="item-title">{formatSubject(s)}</div>
                         <div className="item-sub">{formatDepartment(s.departmentId, s.departmentCode)} • Teacher: {s.teacherId?.name || 'Unassigned'}</div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(s)}
+                        title="Delete Subject"
+                        aria-label={`Delete ${formatSubject(s)}`}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: 4, flexShrink: 0 }}
+                      >
+                        <Icon name="trash" size={15} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -92,6 +123,34 @@ export default function AdminSubjects() {
           </div>
         ))
       )}
+
+      {/* Delete confirmation — always shown before the DELETE request goes
+          out, so a stray click on the trash icon can never remove a Subject.
+          The attendance-history note is there because the delete is a soft
+          delete: past Sessions/Attendances are kept. */}
+      <Modal open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)}>
+        <div className="modal-title">Delete Subject</div>
+        {deleteTarget && (
+          <>
+            <p style={{ fontSize: 13.5, color: 'var(--txt2)', lineHeight: 1.6, margin: '4px 0 14px' }}>
+              Are you sure you want to delete <strong style={{ color: 'var(--txt)' }}>{formatSubject(deleteTarget)}</strong>
+              {' '}({formatDepartment(deleteTarget.departmentId, deleteTarget.departmentCode)})?
+            </p>
+            <div className="info-banner" style={{ marginBottom: 16 }}>
+              <Icon name="info" size={16} />
+              <span className="info-text">
+                The Subject will be removed from every list. Attendance already taken for it will be kept in the database.
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button type="button" className="btn-secondary w-full" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</button>
+              <button type="button" className="btn-danger w-full" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

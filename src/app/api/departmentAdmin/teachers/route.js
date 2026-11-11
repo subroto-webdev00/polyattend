@@ -45,6 +45,10 @@ export async function GET(request) {
         isActive: true,
         department: { select: { id: true, name: true, code: true } },
         taughtSubjects: {
+          // Deleted Subjects are soft-deleted (`isActive: false`) so their
+          // attendance history survives — but they must not keep showing up
+          // on the Teacher's card afterwards.
+          where: { isActive: true },
           select: { id: true, name: true, code: true, semester: true, section: true, shift: true, isActive: true },
         },
       },

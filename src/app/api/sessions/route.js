@@ -53,6 +53,9 @@ export async function POST(request) {
     } else {
       subject = await prisma.subject.findUnique({ where: { id: subjectId } });
       if (!subject) return NextResponse.json({ success: false, message: 'Subject not found' }, { status: 404 });
+      // A deleted (soft) Subject must not start new classes either — only
+      // its old Sessions/Attendances remain readable.
+      if (subject.isActive === false) return NextResponse.json({ success: false, message: 'This Subject has been deleted' }, { status: 400 });
     }
     if (!subject.departmentId) return NextResponse.json({ success: false, message: 'This subject has no valid Department.' }, { status: 400 });
     const existing = await prisma.session.findFirst({ where: { subjectId, semester: parseInt(semester), section, status: 'active' } });

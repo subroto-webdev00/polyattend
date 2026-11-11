@@ -15,6 +15,16 @@ export async function GET(request, { params }) {
     const to = searchParams.get('to');
     const subject = await prisma.subject.findUnique({ where: { id: subjectId }, include: { department: { select: { id:true, name:true, code:true } }, teacher: { select: { id:true, name:true } } } });
     if (!subject) return NextResponse.json({ success: false, message: 'Subject not found' }, { status: 404 });
+    // A Department Admin may only open a report for a Subject of their OWN
+    // Department (and Shift). Without this any departmentAdmin could read
+    // another department's full attendance report by guessing the id.
+    if (auth.user.role === 'departmentAdmin') {
+      const inDept = subject.departmentId === auth.user.departmentId;
+      const inShift = !auth.user.shift || !subject.shift || subject.shift === auth.user.shift;
+      if (!inDept || !inShift) {
+        return NextResponse.json({ success: false, message: 'Not allowed: this Subject belongs to another Department or Shift' }, { status: 403 });
+      }
+    }
     const dateFilter = {};
     if (from) dateFilter.gte = new Date(from);
     if (to) dateFilter.lte = new Date(to);

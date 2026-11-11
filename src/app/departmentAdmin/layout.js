@@ -7,6 +7,7 @@ const navItems = [
   { label: 'Notice', icon: 'megaphone', path: '/departmentAdmin/notices' },
   { section: 'Management' },
   { label: 'Teacher Management', icon: 'users', path: '/departmentAdmin/teachers' },
+  { label: 'Subject', icon: 'book', path: '/departmentAdmin/subjects' },
   { label: 'Student Validation', icon: 'users', path: '/departmentAdmin/students' },
   { label: 'Semester Promotion', icon: 'chevronRight', path: '/departmentAdmin/promotion' },
   { label: 'Users', icon: 'users', path: '/departmentAdmin/users' },
