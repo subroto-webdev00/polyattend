@@ -3,6 +3,7 @@ import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
 import { checkHoliday } from '@/lib/holidayCheck';
 import { withLiveTotalStudents } from '@/lib/sessionTotals';
+import { normalizeSession } from '@/lib/sessionShape';
 export const dynamic = 'force-dynamic';
 const sessionInclude = {
   teacher: { select: { id: true, name: true, email: true, role: true } },
@@ -10,24 +11,10 @@ const sessionInclude = {
   subject: { select: { id: true, name: true, code: true } },
 };
 
-// Normalize Prisma's separate foreign keys + relations into the populated
-// document shape used throughout the existing frontend.
-function normalizeSession(session) {
-  if (!session) return session;
-  return {
-    ...session,
-    _id: session.id,
-    teacherId: session.teacher
-      ? { ...session.teacher, _id: session.teacher.id || session.teacher._id }
-      : session.teacherId,
-    departmentId: session.department
-      ? { ...session.department, _id: session.department.id }
-      : session.departmentId,
-    subjectId: session.subject
-      ? { ...session.subject, _id: session.subject.id }
-      : session.subjectId,
-  };
-}
+// normalizeSession moved to @/lib/sessionShape so every route that returns a
+// session to the frontend (including /api/attendance/active-session) can hand
+// back the same populated shape.
+
 export async function POST(request) {
   const auth = await requireAuth(request, ['teacher', 'admin']);
   if (auth.error) return auth.error;
