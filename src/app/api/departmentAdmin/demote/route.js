@@ -48,7 +48,10 @@ export async function POST(request) {
       shift: auth.user.shift,
       semester: sourceSemester,
       isActive: true,
-      registered: true,
+      // No `registered` filter: the promotion roster lists invited (pending)
+      // students too, and this re-check is all-or-nothing — with a registered
+      // filter here, selecting one pending student would make the whole
+      // demotion fail as "stale". isActive still blocks cancelled invites.
     };
 
     const result = await prisma.$transaction(async (tx) => {

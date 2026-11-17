@@ -18,14 +18,35 @@ export async function POST(request) {
     const className = classNameFromSession(session);
     const validItems = attendanceList.filter(item => item?.studentId);
     if (!validItems.length) return NextResponse.json({ success: false, message: 'No valid student found' }, { status: 400 });
-    await prisma.$transaction(validItems.map(item =>
+    // Only ACTIVE members of this class may be written. The posted list can
+    // be stale — a cancelled invite, a deactivated account, a student who
+    // moved class — and a mark on anyone the reports filter out would never
+    // show up in a report (same "marked but missing" bug). Pending (invited)
+    // students are active, so they are written like everyone else.
+    const itemIds = [...new Set(validItems.map(i => i.studentId))];
+    const members = await prisma.user.findMany({
+      where: {
+        id: { in: itemIds },
+        role: 'student',
+        isActive: true,
+        departmentId: session.departmentId,
+        semester: session.semester,
+        section: session.section,
+        ...(session.shift ? { shift: session.shift } : {}),
+      },
+      select: { id: true },
+    });
+    const memberIds = new Set(members.map(m => m.id));
+    const items = validItems.filter(i => memberIds.has(i.studentId));
+    if (!items.length) return NextResponse.json({ success: false, message: 'No active student of this class in the list' }, { status: 400 });
+    await prisma.$transaction(items.map(item =>
       prisma.attendance.upsert({
         where: { sessionId_studentId: { sessionId, studentId: item.studentId } },
         update: { status: item.status === 'present' ? 'present' : 'absent', markedBy: 'manual' },
         create: { sessionId, studentId: item.studentId, subjectId: session.subjectId, departmentId: session.departmentId, semester: session.semester, section: session.section, className, date: session.date, status: item.status === 'present' ? 'present' : 'absent', markedBy: 'manual' },
       })
     ));
-    const presentCount = validItems.filter(a => a.status === 'present').length;
+    const presentCount = items.filter(a => a.status === 'present').length;
     await prisma.session.update({ where: { id: sessionId }, data: { presentCount } });
     return NextResponse.json({ success: true, message: 'Attendance saved', presentCount });
   } catch (error) { return errorResponse(error); }

@@ -139,6 +139,9 @@ export default function TeacherCoveredMissClass() {
         departmentId: sess.departmentId?._id || sess.departmentId,
         semester: sess.semester,
         section: sess.section,
+        // Cancelled invites / deactivated accounts must not be markable —
+        // a mark on them would never appear in any report (isActive filter).
+        activeOnly: 'true',
       };
       if (sess.shift) params.shift = sess.shift;
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
+import { withLiveTotalStudents } from '@/lib/sessionTotals';
 export const dynamic = 'force-dynamic';
 const sessionInclude = { teacher: { select: { id: true, name: true } }, department: { select: { id: true, name: true, code: true } }, subject: { select: { id: true, name: true, code: true } } };
 export async function GET(request, { params }) {
@@ -14,7 +15,9 @@ export async function GET(request, { params }) {
     // Department Admin is department-wide: own Department + Shift, any Semester.
     if (auth.user.role === 'departmentAdmin' && (session.departmentId !== auth.user.departmentId || session.shift !== auth.user.shift)) return NextResponse.json({ success: false, message: 'Outside your scope' }, { status: 403 });
     const attendance = await prisma.attendance.findMany({ where: { sessionId: id }, include: { student: { select: { id: true, name: true, studentId: true, section: true } } } });
-    return NextResponse.json({ success: true, session, attendance });
+    // Fresh roster count — the stored one can be stale, see lib/sessionTotals.js.
+    const [liveSession] = await withLiveTotalStudents([session]);
+    return NextResponse.json({ success: true, session: liveSession, attendance });
   } catch (error) { return errorResponse(error); }
 }
 export async function DELETE(request, { params }) {

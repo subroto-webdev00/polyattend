@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
+import { withLiveTotalStudents } from '@/lib/sessionTotals';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,8 +69,11 @@ export async function GET(request) {
         subject: { select: { id: true, name: true, code: true, shift: true, semester: true, section: true } },
       },
     });
+    // Stored `totalStudents` can be stale — refresh it for the response,
+    // see lib/sessionTotals.js.
+    const liveSessions = await withLiveTotalStudents(sessions);
 
-    const classes = sessions.map((s) => {
+    const classes = liveSessions.map((s) => {
       // Prefer the Session's own shift; fall back to the Subject's, which is
       // where a shiftless session still inherits one from.
       const shift = s.shift || s.subject?.shift || null;

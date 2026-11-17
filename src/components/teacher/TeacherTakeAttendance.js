@@ -68,7 +68,10 @@ export default function TeacherTakeAttendance() {
         role: 'student',
         departmentId: sess.departmentId?._id || sess.departmentId,
         semester: sess.semester,
-        section: sess.section
+        section: sess.section,
+        // Cancelled invites / deactivated accounts must not be markable —
+        // a mark on them would never appear in any report (isActive filter).
+        activeOnly: 'true',
       };
       // If the session has a shift, fetch students of that shift
       if (sess.shift) params.shift = sess.shift;

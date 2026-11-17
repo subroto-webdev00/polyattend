@@ -117,8 +117,12 @@ export async function GET(request) {
       semester: semesterNum,
     };
     if (promotionRoster) {
+      // Invited (pending) students belong to the class and move with it:
+      // filtering `registered: true` here stranded every pending student in
+      // the old Semester, so their attendance and reports stopped matching
+      // the class they actually attend. Cancelled invites stay out via
+      // isActive — same roster rule as the reports.
       where.isActive = true;
-      where.registered = true;
     } else {
       // Older failed cancellation attempts only set isActive=false. Hide
       // those stale pending shadows; completed inactive students remain

@@ -453,7 +453,7 @@ export default function DepartmentAdminPromotion() {
             <div className="card">
               <div className="empty">
                 <div className="empty-icon"><Icon name="users" size={24} /></div>
-                <p>No active registered students found</p>
+                <p>No active students found</p>
               </div>
             </div>
           ) : visibleBuckets.length === 0 ? (

@@ -34,9 +34,20 @@ export async function GET(request) {
     }
 
     if (searchParams.get('departmentId')) where.departmentId = searchParams.get('departmentId');
-    if (searchParams.get('shift')) where.shift = searchParams.get('shift');
+    // `1st`/`2nd` (raw DB) and `first`/`second` (Prisma enum) both arrive from
+    // callers — without this a raw value threw "Invalid value for argument
+    // `shift`" and 500'd the marking roster. See /api/users/section.
+    const shiftParam = searchParams.get('shift');
+    if (shiftParam) where.shift = shiftParam === '1st' ? 'first' : shiftParam === '2nd' ? 'second' : shiftParam;
     if (searchParams.get('semester')) where.semester = parseInt(searchParams.get('semester'), 10);
     if (searchParams.get('section')) where.section = searchParams.get('section');
+    // Attendance-marking rosters (Take Attendance / Cover Class / Substitute)
+    // pass `activeOnly=true`: a cancelled invite or deactivated account must
+    // not be markable, because every report filters `isActive: true` — a mark
+    // written on an inactive student would silently vanish from the report,
+    // the same "marked but missing" bug the reports used to have. The Users
+    // page does NOT pass it, so admins still see deactivated accounts.
+    if (searchParams.get('activeOnly') === 'true') where.isActive = true;
 
     const search = searchParams.get('search')?.trim();
     if (search) {
@@ -75,6 +86,7 @@ export async function GET(request) {
         searchParams.get('shift') || '-',
         searchParams.get('semester') || '-',
         searchParams.get('section') || '-',
+        searchParams.get('activeOnly') || '-',
         search || '-',
         searchParams.get('since') || '-',
       ].join('|');

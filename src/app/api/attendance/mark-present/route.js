@@ -15,6 +15,11 @@ export async function POST(request) {
     if (auth.user.role !== 'admin' && session.teacherId !== auth.user.id) return NextResponse.json({ success: false, message: 'Not your session' }, { status: 403 });
     const student = await prisma.user.findUnique({ where: { id: studentId } });
     if (!student || student.role !== 'student') return NextResponse.json({ success: false, message: 'Student not found' }, { status: 404 });
+    // Cancelled invites / deactivated accounts can never be marked — every
+    // report filters `isActive: true`, so a mark written here would silently
+    // disappear from the report. Pending (invited) students ARE markable:
+    // they are isActive with role student, so they pass this guard.
+    if (!student.isActive) return NextResponse.json({ success: false, message: `${student.name}'s account is deactivated` }, { status: 400 });
     const sessionShift = session.shift || session.subject?.shift;
     if (sessionShift && student.shift !== sessionShift) return NextResponse.json({ success: false, message: `${student.name} is not a student of this shift` }, { status: 400 });
     if (student.semester !== session.semester || student.section !== session.section || student.departmentId !== session.departmentId) return NextResponse.json({ success: false, message: `${student.name} is not a student of this class` }, { status: 400 });

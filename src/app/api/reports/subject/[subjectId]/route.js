@@ -28,8 +28,12 @@ export async function GET(request, { params }) {
     const dateFilter = {};
     if (from) dateFilter.gte = new Date(from);
     if (to) dateFilter.lte = new Date(to);
+    // Invited (pending) students sit in the class and can be marked, so the
+    // report must list them too — see the same note in
+    // /api/reports/class/[sessionId]. `isActive: true` still hides cancelled
+    // invites and deactivated accounts.
     const students = await prisma.user.findMany({
-      where: { role: 'student', departmentId: subject.departmentId, semester: subject.semester, section: subject.section, isActive: true, registered: true, ...(subject.shift ? { shift: subject.shift } : {}) },
+      where: { role: 'student', departmentId: subject.departmentId, semester: subject.semester, section: subject.section, isActive: true, ...(subject.shift ? { shift: subject.shift } : {}) },
       select: { id:true, name:true, studentId:true, section:true },
       orderBy: { name: 'asc' }
     });

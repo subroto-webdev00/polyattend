@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, errorResponse } from '@/lib/auth';
 import { checkHoliday } from '@/lib/holidayCheck';
+import { withLiveTotalStudents } from '@/lib/sessionTotals';
 export const dynamic = 'force-dynamic';
 const sessionInclude = {
   teacher: { select: { id: true, name: true, email: true, role: true } },
@@ -66,7 +67,11 @@ export async function POST(request) {
       const existingForDate = await prisma.session.findFirst({ where: { subjectId, date: { gte: dayStart, lte: dayEnd } } });
       if (existingForDate) return NextResponse.json({ success: false, message: 'A Session already exists for this date' }, { status: 400 });
     }
-    const totalStudents = await prisma.user.count({ where: { role: 'student', departmentId: subject.departmentId, semester: parseInt(semester), section, isActive: true, registered: true, ...(subject.shift ? { shift: subject.shift } : {}) } });
+    // Same roster rule as the marking list and the reports: invited (pending)
+    // students count too, otherwise `Total Students` came out lower than the
+    // number of students the teacher can actually mark — which pushed the
+    // saved percentage above 100%.
+    const totalStudents = await prisma.user.count({ where: { role: 'student', departmentId: subject.departmentId, semester: parseInt(semester), section, isActive: true, ...(subject.shift ? { shift: subject.shift } : {}) } });
     const data = { teacherId: auth.user.id, departmentId: subject.departmentId, subjectId, semester: parseInt(semester), section, shift: subject.shift || null, totalStudents, ...(sessionDate ? { date: sessionDate } : {}) };
     const session = await prisma.session.create({ data, include: sessionInclude });
     return NextResponse.json({ success: true, session: normalizeSession(session) }, { status: 201 });
@@ -91,6 +96,10 @@ export async function GET(request) {
     // would let a Department Admin read another department's sessions.
     if (auth.user.role === 'departmentAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
     const sessions = await prisma.session.findMany({ where, include: sessionInclude, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], take: 100 });
-    return NextResponse.json({ success: true, count: sessions.length, sessions: sessions.map(normalizeSession) });
+    // Stored `totalStudents` goes stale the moment the roster changes (new
+    // invites, promotion, a cancelled invite) — every card and dashboard
+    // percentage divides by it. Recompute it live, see lib/sessionTotals.js.
+    const liveSessions = await withLiveTotalStudents(sessions);
+    return NextResponse.json({ success: true, count: liveSessions.length, sessions: liveSessions.map(normalizeSession) });
   } catch (error) { return errorResponse(error); }
 }

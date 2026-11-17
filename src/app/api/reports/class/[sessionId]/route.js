@@ -29,6 +29,14 @@ export async function GET(request, { params }) {
     // ones with no mark row yet — an absent student is still a row in a
     // register. The old JSON path only ever listed students who had a mark,
     // so a partially-taken session silently dropped the unmarked students.
+    //
+    // INVITED STUDENTS COUNT TOO: a student added through Student Validation
+    // starts as a pending invite (`registered: false`) until they complete
+    // their own registration, but they still sit in the class and can be
+    // marked present — so the register/PDF must list them as well. Filtering
+    // on `registered: true` here is exactly why a class of 40 invited
+    // students produced a one-row report. Only `isActive: true` is kept, so
+    // cancelled invites and deactivated accounts stay hidden.
     const allStudents = await prisma.user.findMany({
       where: {
         role: 'student',
@@ -36,7 +44,6 @@ export async function GET(request, { params }) {
         semester: session.semester,
         section: session.subjectId?.section ?? session.section,
         isActive: true,
-        registered: true,
         ...(session.shift ? { shift: session.shift } : {}),
       },
       select: { id:true, name:true, studentId:true, section:true },
