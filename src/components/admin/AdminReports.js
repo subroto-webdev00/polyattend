@@ -53,8 +53,7 @@ function SearchBox({ value, onChange, placeholder }) {
   );
 }
 
-function SectionHeading({ label }) {
-  return (
+function SectionHeading({ label }) {  return (
     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--txt2)', background: 'var(--bg3)', padding: '6px 12px', borderRadius: 8, margin: '10px 0 6px' }}>
       Group: {label}
     </div>
@@ -63,7 +62,7 @@ function SectionHeading({ label }) {
 
 function DownloadButtons({ id, endpoint, baseName, downloadingId, onDownload }) {
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
+    <div className="ar-actions">
       <button className="btn-secondary btn-sm" onClick={() => onDownload(endpoint, id, 'excel', `${baseName}.xlsx`)} disabled={downloadingId === `${id}-excel`}>
         {downloadingId === `${id}-excel` ? <div className="spinner spinner-sm" /> : <><Icon name="download" size={14} /> Excel</>}
       </button>
@@ -74,8 +73,17 @@ function DownloadButtons({ id, endpoint, baseName, downloadingId, onDownload }) 
   );
 }
 
-export default function AdminReports() {
-  const [subjects, setSubjects] = useState([]);
+// Tab strip — identical layout and icons to the Teacher panel's Reports page.
+// The " Report" suffix is its own span so the narrow-screen rule below can
+// drop it: at 375px "Subject Report" + icon cannot share one 108px tab
+// without wrapping to two lines, while "Subject" fits comfortably.
+const TABS = [
+  { key: 'subject', label: 'Subject', icon: 'book' },
+  { key: 'session', label: 'Session', icon: 'clipboard' },
+  { key: 'student', label: 'Student', icon: 'users' },
+];
+
+export default function AdminReports() {  const [subjects, setSubjects] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [students, setStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -196,21 +204,64 @@ export default function AdminReports() {
   if (loading) return <div className="loading"><div className="spinner" /></div>;
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h2 className="page-title">Reports & Export</h2>
-        <p className="page-sub">Download Excel or PDF reports</p>
+    <div>
+      {/* Same chrome as the Teacher panel's Reports page (TeacherExport):
+          an action-bar header, a segmented tab switcher, and an info banner
+          above each tab — so the two roles read as one product. */}
+      <style>{`
+        .ar-tabs { display: flex; gap: 4px; background: var(--surface); border-radius: var(--radius); padding: 4px; margin-bottom: 16px; border: 1px solid var(--border); }
+        .ar-tab {
+          flex: 1; padding: 8px 4px; border: none; border-radius: calc(var(--radius) - 2px);
+          cursor: pointer; font-size: 13px; font-weight: 400; background: transparent; color: var(--txt2);
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+          transition: all 0.15s ease; font-family: inherit; white-space: nowrap;
+        }
+        .ar-tab-active { background: var(--primary); color: #fff; font-weight: 700; }
+        .ar-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+        /* PHONE (<=640px): the row is icon + text + two download buttons in
+           one flex line. At 375px the text column collapses to ~60px, so the
+           meta line (date • department • shift • present) and the buttons are
+           both squeezed into unreadable slivers. Let the actions wrap onto
+           their own line and let the meta text wrap instead of ellipsising. */
+        @media (max-width: 640px) {
+          .ar-tab { font-size: 12px; padding: 9px 2px; gap: 4px; }
+          .ar-tab-suffix { display: none; }
+          .ar-row { flex-wrap: wrap; padding: 13px 14px; row-gap: 10px; }
+          .ar-row .item-sub { white-space: normal; }
+          .ar-row .ar-actions { flex: 1 0 100%; justify-content: flex-end; }
+        }
+        @media (max-width: 380px) {
+          .ar-row .ar-actions { justify-content: stretch; }
+          .ar-row .ar-actions .btn-secondary { flex: 1; justify-content: center; }
+        }
+      `}</style>
+
+      <div className="action-bar">
+        <Icon name="chart" size={18} style={{ color: 'var(--txt2)' }} />
+        <span className="action-bar-title">Reports</span>
       </div>
 
-      <div className="chips" style={{ background: 'none', border: 'none', padding: '0 0 16px 0' }}>
-        {[['subject', 'Subject Reports'], ['session', 'Session Reports'], ['student', 'Student Reports']].map(([k, l]) => (
-          <button key={k} className={`chip${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
-        ))}
-      </div>
+      <div className="page" style={{ paddingTop: 8 }}>
+        <div className="ar-tabs">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`ar-tab${tab === t.key ? ' ar-tab-active' : ''}`}
+            >
+              <Icon name={t.icon} size={14} />
+              <span>{t.label}<span className="ar-tab-suffix"> Report</span></span>
+            </button>
+          ))}
+        </div>
 
       {tab === 'subject' && (
         <>
-          <div className="section-title">Subject-wise Full Report</div>
+          <div className="info-banner mb-3">
+            <Icon name="info" size={16} />
+            <span className="info-text">Download the full Excel report of all sessions and students for a Subject</span>
+          </div>
           <SearchBox value={subjectSearch} onChange={setSubjectSearch} placeholder="Search by Subject name, code or department..." />
           {filteredSubjects.length === 0 ? (
             <div className="card"><div className="empty"><p>{subjects.length === 0 ? 'No subjects yet' : 'No subject found'}</p></div></div>
@@ -219,7 +270,7 @@ export default function AdminReports() {
               <SectionHeading label={group.section} />
               <div className="card">
                 {group.items.map(s => (
-                  <div key={s._id} className="list-item">
+                  <div key={s._id} className="list-item ar-row">
                     <div className="item-icon icon-green"><Icon name="book" size={18} /></div>
                     <div className="item-content">
                       <div className="item-title">{formatSubject(s)}</div>
@@ -236,7 +287,10 @@ export default function AdminReports() {
 
       {tab === 'session' && (
         <>
-          <div className="section-title">Class Session Attendance</div>
+          <div className="info-banner mb-3">
+            <Icon name="info" size={16} />
+            <span className="info-text">Download the attendance list for each class session</span>
+          </div>
           <SearchBox value={sessionSearch} onChange={setSessionSearch} placeholder="Search by Subject, group or date..." />
           {sessions.length === 0 ? (
             <div className="card"><div className="empty"><p>No completed sessions yet</p></div></div>
@@ -247,7 +301,7 @@ export default function AdminReports() {
               <SectionHeading label={group.section} />
               <div className="card">
                 {group.items.map(s => (
-                  <div key={s._id} className="list-item">
+                  <div key={s._id} className="list-item ar-row">
                     <div className="item-icon icon-blue"><Icon name="calendar" size={18} /></div>
                     <div className="item-content">
                       <div className="item-title">{formatSubject(s.subjectId)} — Sem {s.semester} • Group {s.section}</div>
@@ -273,7 +327,10 @@ export default function AdminReports() {
 
       {tab === 'student' && (
         <>
-          <div className="section-title">Student Personal Report</div>
+          <div className="info-banner mb-3">
+            <Icon name="info" size={16} />
+            <span className="info-text">Search by Student's name or ID, then download the report</span>
+          </div>
           <SearchBox value={studentSearch} onChange={setStudentSearch} placeholder="Search by Student name or ID..." />
           {studentSearch.trim() === '' ? (
             <div className="card"><div className="empty"><p>Type a name or Student ID to find a student.</p></div></div>
@@ -286,7 +343,7 @@ export default function AdminReports() {
               <SectionHeading label={group.section} />
               <div className="card">
                 {group.items.map(s => (
-                  <div key={s._id} className="list-item">
+                  <div key={s._id} className="list-item ar-row">
                     <div className="item-icon icon-amber"><Icon name="users" size={18} /></div>
                     <div className="item-content">
                       <div className="item-title">{s.name}</div>
@@ -300,6 +357,7 @@ export default function AdminReports() {
           ))}
         </>
       )}
+      </div>
     </div>
   );
 }
