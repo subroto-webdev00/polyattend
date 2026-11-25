@@ -76,6 +76,7 @@ function DownloadButtons({ id, endpoint, baseName, downloadingId, onDownload }) 
 
 export default function AdminReports() {
   const [subjects, setSubjects] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [students, setStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,7 @@ export default function AdminReports() {
 
   // ── FIX (Requirement #3): search bars on every report tab ──────────────
   const [subjectSearch, setSubjectSearch] = useState('');
+  const [sessionSearch, setSessionSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
 
   useEffect(() => {
@@ -102,6 +104,17 @@ export default function AdminReports() {
         toast.error(err.response?.data?.message || 'Problem loading Reports');
       })
       .finally(() => setLoading(false));
+
+    // Session Report tab: every finished session the role may see. The API
+    // applies the scope itself — a Department Admin only ever receives their
+    // own Department + Shift sessions, so this is the same call the Teacher
+    // panel makes, just without a teacherId restriction for admins.
+    api.get('/sessions?status=ended')
+      .then(r => setSessions(r.data.sessions || []))
+      .catch(err => {
+        console.error(err);
+        toast.error(err.response?.data?.message || 'Problem loading Sessions');
+      });
   }, []);
 
   // PERFORMANCE: the Student tab searches server-side instead of filtering
@@ -149,6 +162,23 @@ export default function AdminReports() {
   const groupedSubjects = useMemo(() => groupBySection(filteredSubjects), [filteredSubjects]);
   const groupedStudents = useMemo(() => groupBySection(students), [students]);
 
+  // Session tab search — matches subject name/code, group, or a date typed
+  // in any readable form (toLocaleDateString output, ISO prefix).
+  const filteredSessions = useMemo(() => {
+    const q = sessionSearch.trim().toLowerCase();
+    if (!q) return sessions;
+    return sessions.filter(s => {
+      const d = new Date(s.date);
+      const local = d.toLocaleDateString('en-BD').toLowerCase();
+      const iso = d.toISOString().slice(0, 10);
+      return s.subjectId?.name?.toLowerCase().includes(q) ||
+        s.subjectId?.code?.toLowerCase().includes(q) ||
+        String(s.section || '').toLowerCase() === q ||
+        local.includes(q) || iso.includes(q);
+    });
+  }, [sessions, sessionSearch]);
+  const groupedSessions = useMemo(() => groupBySection(filteredSessions), [filteredSessions]);
+
   // ── FEATURE: PDF download alongside Excel ──────────────────────────────
   const download = async (endpoint, id, format, filename) => {
     const key = `${id}-${format}`;
@@ -173,7 +203,7 @@ export default function AdminReports() {
       </div>
 
       <div className="chips" style={{ background: 'none', border: 'none', padding: '0 0 16px 0' }}>
-        {[['subject', 'Subject Reports'], ['student', 'Student Reports']].map(([k, l]) => (
+        {[['subject', 'Subject Reports'], ['session', 'Session Reports'], ['student', 'Student Reports']].map(([k, l]) => (
           <button key={k} className={`chip${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -196,6 +226,43 @@ export default function AdminReports() {
                       <div className="item-sub">{formatDepartment(s.departmentId, s.departmentCode)} • Sem {s.semester} • Group {s.section} • {formatShift(s.shift)} Shift</div>
                     </div>
                     <DownloadButtons id={s._id} endpoint={`/reports/subject/${s._id}`} baseName={`subject_${s.code}_report`} downloadingId={downloadingId} onDownload={download} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {tab === 'session' && (
+        <>
+          <div className="section-title">Class Session Attendance</div>
+          <SearchBox value={sessionSearch} onChange={setSessionSearch} placeholder="Search by Subject, group or date..." />
+          {sessions.length === 0 ? (
+            <div className="card"><div className="empty"><p>No completed sessions yet</p></div></div>
+          ) : filteredSessions.length === 0 ? (
+            <div className="card"><div className="empty"><p>No session found</p></div></div>
+          ) : groupedSessions.map(group => (
+            <div key={group.section}>
+              <SectionHeading label={group.section} />
+              <div className="card">
+                {group.items.map(s => (
+                  <div key={s._id} className="list-item">
+                    <div className="item-icon icon-blue"><Icon name="calendar" size={18} /></div>
+                    <div className="item-content">
+                      <div className="item-title">{formatSubject(s.subjectId)} — Sem {s.semester} • Group {s.section}</div>
+                      <div className="item-sub">
+                        {new Date(s.date).toLocaleDateString('en-BD', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                        {' '}• {formatDepartment(s.departmentId)} • {formatShift(s.shift || s.subjectId?.shift)} Shift • {s.presentCount}/{s.totalStudents} present
+                      </div>
+                    </div>
+                    <DownloadButtons
+                      id={s._id}
+                      endpoint={`/reports/class/${s._id}`}
+                      baseName={`session_${s.subjectId?.code || 'report'}_${new Date(s.date).toISOString().slice(0, 10)}`}
+                      downloadingId={downloadingId}
+                      onDownload={download}
+                    />
                   </div>
                 ))}
               </div>

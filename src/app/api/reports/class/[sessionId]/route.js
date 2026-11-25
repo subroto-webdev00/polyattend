@@ -15,6 +15,17 @@ export async function GET(request, { params }) {
       include: { subject: { select: { id:true, name:true, code:true } }, teacher: { select: { id:true, name:true } }, department: { select: { id:true, name:true, code:true } } }
     });
     if (!session) return NextResponse.json({ success: false, message: 'Session not found' }, { status: 404 });
+    // A Department Admin may only open a report for their OWN Department (and
+    // Shift) — the list endpoint scopes the query, but a guessed id would
+    // otherwise hand over another department's full attendance sheet. Same
+    // rule as the subject report below.
+    if (auth.user.role === 'departmentAdmin') {
+      const inDept = session.departmentId === auth.user.departmentId;
+      const inShift = !auth.user.shift || !session.shift || session.shift === auth.user.shift;
+      if (!inDept || !inShift) {
+        return NextResponse.json({ success: false, message: 'Not allowed: this Session belongs to another Department or Shift' }, { status: 403 });
+      }
+    }
     const attendance = await prisma.attendance.findMany({
       where: { sessionId },
       include: { student: { select: { id:true, name:true, studentId:true, section:true } } },

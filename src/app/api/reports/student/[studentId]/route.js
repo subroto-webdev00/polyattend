@@ -14,6 +14,15 @@ export async function GET(request, { params }) {
     const subjectId = searchParams.get('subjectId');
     if (auth.user.role === 'student' && auth.user.id !== studentId)
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
+    // A Department Admin only ever searches their own students (the roster
+    // route scopes it), so a guessed id must not open another department's
+    // student history either.
+    if (auth.user.role === 'departmentAdmin') {
+      const s = await prisma.user.findUnique({ where: { id: studentId }, select: { departmentId: true, shift: true } });
+      if (!s || s.departmentId !== auth.user.departmentId || (auth.user.shift && s.shift && s.shift !== auth.user.shift)) {
+        return NextResponse.json({ success: false, message: 'Forbidden: this student is not in your Department' }, { status: 403 });
+      }
+    }
     const student = await prisma.user.findUnique({ where: { id: studentId }, select: { id:true, name:true, studentId:true, semester:true, section:true, shift:true, department: { select: { id:true, name:true, code:true } } } });
     if (!student) return NextResponse.json({ success: false, message: 'Student not found' }, { status: 404 });
     const where = { studentId };
