@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth, normalizeDepartmentAdmin, errorResponse } from '@/lib/auth';
-import { cacheWrap, cacheKey, cacheDel } from '@/lib/cache';
+import { cacheWrap, cacheKey } from '@/lib/cache';
 export const dynamic = 'force-dynamic';
 
 // This runs on every authenticated page load, and its result only changes when
@@ -23,7 +23,8 @@ export async function GET(request) {
           include: { department: { select: { id: true, name: true, code: true } }, subject: { select: { id: true, name: true, code: true, semester: true, section: true, shift: true } } },
         });
         if (!user) return null;
-        const { password: _, ...rest } = user;
+        const rest = { ...user };
+        delete rest.password;
         rest._id = rest.id;
         // Match the login response shape used by the frontend. Without this,
         // /auth/me overwrites the populated department object with the raw

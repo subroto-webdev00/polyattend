@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Unit · Build
+    runs-on: ubuntu-latest
+    # The build only needs the URL to exist for `prisma generate`; no step in
+    # this job opens a DB connection.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/polyattend
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm is pinned by package.json#packageManager, so no version here.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint (code quality)
+        run: pnpm lint
+
+      - name: TypeScript (type checking)
+        run: pnpm typecheck
+
+      - name: Vitest (unit tests)
+        run: pnpm test
+
+      - name: Next.js production build
+        run: pnpm build
+
+  e2e:
+    name: Playwright (E2E)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: polyattend
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/polyattend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create schema
+        run: npx prisma db push
+
+      - name: Seed reference data
+        run: pnpm db:seed
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 7

@@ -41,6 +41,12 @@ public/sw*.js
 public/swe-worker*.js
 public/workbox-*.js
 
+# Playwright test output (the report artifacts are regenerated per run)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 # Archives, backups and mobile release bundles
 *.zip
 *.jsapp

@@ -1,3 +1,4 @@
+// @ts-check
 // Shared "strong password" rule — used by every backend route that sets a
 // password (register-public, admin-register, reset-password,
 // change-password) so the requirement can never drift out of sync between

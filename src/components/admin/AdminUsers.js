@@ -20,10 +20,6 @@ function initials(name) {
   return (name || '').trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-function roleLabel(role) {
-  return ROLE_META[role]?.label || (role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Unknown');
-}
-
 function subInfo(u) {
   const dept = formatDepartment(u.departmentId, u.departmentCode) || null;
   const shift = formatShift(u.shift) ? `${formatShift(u.shift)} Shift` : null;
@@ -44,7 +40,7 @@ function subInfo(u) {
 }
 
 // ─── UserCard ───────────────────────────────────────────────────
-function UserCard({ user, onToggle, onDelete, isSelf, idx }) {
+function UserCard({ user, onToggle, onDelete, isSelf }) {
   const meta = ROLE_META[user.role] || { label: user.role, color: '#64748b', bg: 'var(--bg3)', dot: '#64748b' };
   const info = subInfo(user);
   const [hov, setHov] = useState(false);
@@ -383,6 +379,7 @@ export default function AdminUsers({
   useEffect(() => {
     setUsers([]);
     if (roleFilter !== 'all') load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter]);
 
   // Any dropdown change re-runs the query from page 1 (stale page numbers
@@ -785,11 +782,10 @@ export default function AdminUsers({
                   {group.label}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 10 }}>
-                  {group.items.map((u, idx) => (
+                  {group.items.map(u => (
                     <UserCard
                       key={u._id}
                       user={u}
-                      idx={idx}
                       onToggle={toggleActive}
                       onDelete={openDeleteConfirm}
                       isSelf={currentUser && u._id === currentUser._id}

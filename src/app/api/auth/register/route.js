@@ -11,7 +11,8 @@ export async function POST(request) {
     if (existing) return NextResponse.json({ success: false, message: 'Email already registered' }, { status: 400 });
     const hashed = await hashPassword(password);
     const user = await prisma.user.create({ data: { name, email: email.toLowerCase(), password: hashed, role, studentId, departmentId, semester, section, shift, isVerified: true } });
-    const { password: _, ...safeUser } = user;
+    const safeUser = { ...user };
+    delete safeUser.password;
     return NextResponse.json({ success: true, message: 'User created successfully', user: safeUser }, { status: 201 });
   } catch (error) { return errorResponse(error); }
 }

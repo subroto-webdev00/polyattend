@@ -317,6 +317,7 @@ export default function DepartmentAdminPromotion() {
             <button
               key={semester}
               type="button"
+              role="tab"
               onClick={() => {
                 setFromSemester(semester);
                 setSelected(new Set());

@@ -159,7 +159,6 @@ export function TeacherExport() {
   const [sessions, setSessions] = useState([]);
   const [students, setStudents] = useState([]);
   const [studentSearch, setStudentSearch] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     api.get('/sessions').then(r => setSessions(r.data.sessions));

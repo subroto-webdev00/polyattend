@@ -1,3 +1,4 @@
+// @ts-check
 import crypto from 'crypto';
 
 // Same as the previous MongoDB version — no database dependency, so nothing
