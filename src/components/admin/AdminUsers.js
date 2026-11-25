@@ -319,6 +319,13 @@ export default function AdminUsers({
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('all');
   const [search, setSearch] = useState('');
+  // Multi-filter row next to the search bar. /api/users already accepts all
+  // four as query params, so these are pure UI state sent on every load.
+  const [departments, setDepartments] = useState([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [fDepartment, setFDepartment] = useState('');
+  const [fShift, setFShift] = useState('');
+  const [fSemester, setFSemester] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -327,6 +334,7 @@ export default function AdminUsers({
   const [total, setTotal] = useState(0);
   const [roleCounts, setRoleCounts] = useState({});
   const allAdminsCount = (roleCounts.admin || 0) + (roleCounts.departmentAdmin || 0);
+  const activeFilterCount = [fDepartment, fShift, fSemester].filter(Boolean).length;
   const [countLoading, setCountLoading] = useState(true);
   const PAGE_SIZE = 50;
 
@@ -361,6 +369,9 @@ export default function AdminUsers({
     const params = { page: pageToLoad, limit: PAGE_SIZE };
     if (roleFilter !== 'browse') params.role = roleFilter; // 'browse' = no role filter
     if (search) params.search = search;
+    if (fDepartment) params.departmentId = fDepartment;
+    if (fShift) params.shift = fShift;
+    if (fSemester) params.semester = fSemester;
     api.get('/users', { params }).then(r => {
       setUsers(r.data.users || []);
       setTotal(r.data.total ?? (r.data.users || []).length);
@@ -373,6 +384,18 @@ export default function AdminUsers({
     setUsers([]);
     if (roleFilter !== 'all') load(1);
   }, [roleFilter]);
+
+  // Any dropdown change re-runs the query from page 1 (stale page numbers
+  // would otherwise show an empty page after the result set shrinks).
+  useEffect(() => {
+    if (roleFilter !== 'all') load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fDepartment, fShift, fSemester]);
+
+  // Department dropdown options (cached server-side; cheap to fetch).
+  useEffect(() => {
+    api.get('/departments').then(r => setDepartments(r.data.departments || [])).catch(() => setDepartments([]));
+  }, []);
 
   // Fetch per-role counts + grand total once on mount
   useEffect(() => {
@@ -584,24 +607,122 @@ export default function AdminUsers({
           })}
         </div>
 
-        {roleFilter !== 'all' && <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
-          <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--txt3)', pointerEvents: 'none' }}>
-              <Icon name="search" size={14} />
-            </span>
-            <input
-              className="form-input"
-              style={{ paddingLeft: 34, width: 190, fontSize: 13, borderRadius: 10 }}
-              placeholder="Search name or ID…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <button type="submit" className="btn-secondary btn-sm" style={{ borderRadius: 10 }}>
-            <Icon name="search" size={14} />
+        {roleFilter !== 'all' && <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Filter toggle: reveals the 4 dropdowns below the bar */}
+          <button
+            type="button"
+            className="pu-filter-btn"
+            onClick={() => setFiltersOpen(o => !o)}
+            style={{
+              padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: filtersOpen || activeFilterCount ? 'var(--primary)' : 'var(--bg3)',
+              color: filtersOpen || activeFilterCount ? '#fff' : 'var(--txt2)',
+              borderColor: filtersOpen || activeFilterCount ? 'var(--primary)' : undefined,
+            }}
+            title="Filter users by Department, Shift and Semester"
+          >
+            <Icon name="filter" size={13} />
+            Filter
+            {activeFilterCount > 0 && (
+              <span style={{
+                fontSize: 10, fontWeight: 800, lineHeight: 1, padding: '2px 6px',
+                borderRadius: 20, background: filtersOpen ? 'rgba(255,255,255,0.25)' : 'var(--primary)',
+                color: '#fff',
+              }}>
+                {activeFilterCount}
+              </span>
+            )}
           </button>
-        </form>}
+
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--txt3)', pointerEvents: 'none' }}>
+                <Icon name="search" size={14} />
+              </span>
+              <input
+                className="form-input"
+                style={{ paddingLeft: 34, width: 190, fontSize: 13, borderRadius: 10 }}
+                placeholder="Search name or ID…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn-secondary btn-sm" style={{ borderRadius: 10 }}>
+              <Icon name="search" size={14} />
+            </button>
+          </form>
+        </div>}
       </div>
+
+      {/* ── Multi-filter row: Department / Shift / Semester ── */}
+      {roleFilter !== 'all' && (filtersOpen || activeFilterCount > 0) && (
+        <div style={{
+          background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14,
+          padding: '12px 14px', marginBottom: 18,
+          display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end',
+          boxShadow: 'var(--shadow)',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 800, color: 'var(--txt3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Department</label>
+            <select
+              className="form-input"
+              style={{ width: 190, fontSize: 13, borderRadius: 10 }}
+              value={fDepartment}
+              onChange={e => setFDepartment(e.target.value)}
+            >
+              <option value="">All Departments</option>
+              {departments.map(d => (
+                <option key={d.id} value={d.id}>{formatDepartment(d)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 800, color: 'var(--txt3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shift</label>
+            <select
+              className="form-input"
+              style={{ width: 140, fontSize: 13, borderRadius: 10 }}
+              value={fShift}
+              onChange={e => setFShift(e.target.value)}
+            >
+              <option value="">All Shifts</option>
+              <option value="first">Morning</option>
+              <option value="second">Day</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 800, color: 'var(--txt3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Semester</label>
+            <select
+              className="form-input"
+              style={{ width: 140, fontSize: 13, borderRadius: 10 }}
+              value={fSemester}
+              onChange={e => setFSemester(e.target.value)}
+            >
+              <option value="">All Semesters</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                <option key={s} value={s}>Semester {s}</option>
+              ))}
+            </select>
+          </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              style={{ borderRadius: 10, fontSize: 12 }}
+              onClick={() => { setFDepartment(''); setFShift(''); setFSemester(''); }}
+            >
+              <Icon name="x" size={12} /> Clear filters
+            </button>
+          )}
+
+          <span style={{ fontSize: 12, color: 'var(--txt3)', marginLeft: 'auto' }}>
+            {loading ? 'Filtering…' : `${total} user${total === 1 ? '' : 's'} match`}
+          </span>
+        </div>
+      )}
 
       {/* ── Content ── */}
       {roleFilter === 'all' ? <SummaryView /> : loading ? (
