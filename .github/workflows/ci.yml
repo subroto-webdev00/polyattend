@@ -6,14 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+# CI runners have no .env (it is gitignored), so every runtime secret the
+# app needs during tests must be provided here. These values are dummy
+# strings used only by this workflow — they unlock nothing outside CI.
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/polyattend
+  JWT_SECRET: ci-only-jwt-secret-not-a-real-key
+
 jobs:
   quality:
     name: Lint · Typecheck · Unit · Build
     runs-on: ubuntu-latest
-    # The build only needs the URL to exist for `prisma generate`; no step in
-    # this job opens a DB connection.
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/polyattend
     steps:
       - uses: actions/checkout@v4
 
@@ -57,8 +60,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/polyattend
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
