@@ -54,10 +54,15 @@ export async function GET(request) {
       where.section = auth.user.section;
       if (auth.user.shift) where.shift = auth.user.shift;
     }
-    // Department Admin is department-wide: own Department + Shift, every
-    // Semester. The old `semester: { in: auth.user.semesters }` narrowing
-    // belonged to the old role split.
-    if (auth.user.role === 'departmentAdmin') { where.departmentId = auth.user.departmentId; where.shift = auth.user.shift; }
+    // Department Admin sees their own Department: Subjects in their own Shift
+    // plus not-yet-placed ones (a Subject starts with no Shift and gains one
+    // when it is assigned to a Teacher). The other shift's Subjects belong to
+    // the other Department Admin.
+    if (auth.user.role === 'departmentAdmin') {
+      where.departmentId = auth.user.departmentId;
+      where.shift = undefined;
+      if (auth.user.shift) where.OR = [{ shift: auth.user.shift }, { shift: null }];
+    }
     const subjects = await prisma.subject.findMany({ where, include: subjInclude, orderBy: { name: 'asc' } });
     return NextResponse.json({ success: true, subjects: subjects.map(normalizeSubject) });
   } catch (error) { return errorResponse(error); }
@@ -67,13 +72,50 @@ export async function POST(request) {
   if (auth.error) return auth.error;
   try {
     const body = await request.json();
+
+    // Validation — Name, Code and Department are required. Semester, Group
+    // and Shift are NOT: a Subject is created first (Create Subject) and
+    // placed into a slot later, when it is assigned to a Teacher. When a
+    // slot part is present it must use the app's vocabulary.
+    const name = (body.name || '').trim();
+    const code = (body.code || '').trim().toUpperCase();
+    const VALID_SECTIONS = ['A', 'B', 'C', 'D'];
+    const VALID_SHIFTS = ['1st', '2nd', 'first', 'second'];
+    const normalizeShift = s => (s === '1st' ? 'first' : s === '2nd' ? 'second' : s);
+    const hasValue = v => v !== undefined && v !== null && v !== '';
+    if (!name) return NextResponse.json({ success: false, message: 'Enter Subject Name' }, { status: 400 });
+    if (!code) return NextResponse.json({ success: false, message: 'Enter Subject Code' }, { status: 400 });
+    if (!body.departmentId) return NextResponse.json({ success: false, message: 'Select a Department' }, { status: 400 });
+
+    let semester = null;
+    if (hasValue(body.semester)) {
+      semester = parseInt(body.semester, 10);
+      if (!Number.isInteger(semester) || semester < 1 || semester > 8) {
+        return NextResponse.json({ success: false, message: 'Semester must be 1-8' }, { status: 400 });
+      }
+    }
+    let section = null;
+    if (hasValue(body.section)) {
+      if (!VALID_SECTIONS.includes(body.section)) {
+        return NextResponse.json({ success: false, message: 'Group must be A-D' }, { status: 400 });
+      }
+      section = body.section;
+    }
+    let shift = null;
+    if (hasValue(body.shift)) {
+      if (!VALID_SHIFTS.includes(body.shift)) {
+        return NextResponse.json({ success: false, message: 'Select a valid Shift' }, { status: 400 });
+      }
+      shift = normalizeShift(body.shift);
+    }
+
     const data = {
-      name: body.name,
-      code: body.code,
+      name,
+      code,
       departmentId: body.departmentId,
-      semester: parseInt(body.semester),
-      section: body.section,
-      shift: body.shift,
+      semester,
+      section,
+      shift,
       teacherId: body.teacherId || null,
     };
     // A Department Admin may only ever create Subjects inside their own
@@ -84,8 +126,30 @@ export async function POST(request) {
         return NextResponse.json({ success: false, message: 'Your account has no Department' }, { status: 400 });
       }
       data.departmentId = auth.user.departmentId;
-      if (auth.user.shift) data.shift = auth.user.shift;
+      if (shift && auth.user.shift) data.shift = auth.user.shift;
     }
+
+    // Duplicate guard: same Code in the same Department and the same slot
+    // (null parts match null parts, so two unplaced Subjects with the same
+    // Code collide too). Same Code in a different slot is a different Subject.
+    const duplicate = await prisma.subject.findFirst({
+      where: {
+        code: data.code,
+        departmentId: data.departmentId,
+        semester: data.semester,
+        section: data.section,
+        shift: data.shift,
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      const slot = data.semester ? `Semester ${data.semester}, Group ${data.section}` : 'this Department';
+      return NextResponse.json({
+        success: false,
+        message: `A Subject with code ${data.code} already exists for ${slot}`,
+      }, { status: 400 });
+    }
+
     const subject = await prisma.subject.create({ data, include: subjInclude });
     return NextResponse.json({ success: true, subject: normalizeSubject(subject) }, { status: 201 });
   } catch (error) { return errorResponse(error, 400); }

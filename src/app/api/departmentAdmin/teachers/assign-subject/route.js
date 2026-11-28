@@ -22,7 +22,7 @@ export async function POST(request) {
   const auth = await requireAuth(request, ['departmentAdmin']);
   if (auth.error) return auth.error;
   try {
-    const { teacherId, subjectName, subjectCode, semester, section, shift } = await request.json();
+    const { teacherId, subjectId, subjectName, subjectCode, semester, section, shift } = await request.json();
 
     const departmentId = auth.user.departmentId;
     if (!departmentId) {
@@ -95,21 +95,40 @@ export async function POST(request) {
       }, { status: 403 });
     }
 
-    // One Teacher per Subject+Group slot. A Subject left behind by a deleted
-    // Teacher is free to be reassigned.
-    const existingSubject = await prisma.subject.findFirst({
-      where: {
-        code: normalizedCode,
-        departmentId,
-        semester: semesterNum,
-        section,
-        shift: normalizedShift,
-      },
-      select: { id: true, teacherId: true },
-    });
-    if (existingSubject?.teacherId && existingSubject.teacherId !== teacher.id) {
+    // Resolve which Subject row this assignment writes to:
+    //   1. the Subject the UI picked (subjectId) — must be in this Department;
+    //   2. else a Subject already in exactly this slot (code+dept+semester+
+    //      group+shift);
+    //   3. else an UNPLACED Subject (created via Create Subject, same Code,
+    //      no Semester yet) — assigning it fills its slot in;
+    //   4. else a new row is created below.
+    // Writing to the unplaced row instead of creating a second one keeps
+    // "one row per Subject" true after the Admin creates it up front.
+    let target = null;
+    if (subjectId) {
+      target = await prisma.subject.findFirst({
+        where: { id: subjectId, departmentId },
+        select: { id: true, code: true, teacherId: true },
+      });
+      if (!target) {
+        return NextResponse.json({ success: false, message: 'Subject not found in your Department' }, { status: 404 });
+      }
+    }
+    if (!target) {
+      target = await prisma.subject.findFirst({
+        where: { code: normalizedCode, departmentId, semester: semesterNum, section, shift: normalizedShift },
+        select: { id: true, code: true, teacherId: true },
+      });
+    }
+    if (!target) {
+      target = await prisma.subject.findFirst({
+        where: { code: normalizedCode, departmentId, semester: null },
+        select: { id: true, code: true, teacherId: true },
+      });
+    }
+    if (target?.teacherId && target.teacherId !== teacher.id) {
       const holder = await prisma.user.findUnique({
-        where: { id: existingSubject.teacherId },
+        where: { id: target.teacherId },
         select: { name: true },
       });
       return NextResponse.json({
@@ -117,11 +136,44 @@ export async function POST(request) {
         message: `${holder?.name || 'Another Teacher'} is already assigned to ${normalizedName} (${normalizedCode}) — Group ${section}, Sem ${semesterNum}`,
       }, { status: 400 });
     }
+    // A different Subject already occupies this exact slot — one Teacher per
+    // slot, so the picked Subject cannot be filed on top of it.
+    if (target) {
+      const occupant = await prisma.subject.findFirst({
+        where: {
+          code: normalizedCode,
+          departmentId,
+          semester: semesterNum,
+          section,
+          shift: normalizedShift,
+          id: { not: target.id },
+        },
+        select: { id: true, teacherId: true },
+      });
+      if (occupant?.teacherId && occupant.teacherId !== teacher.id) {
+        const holder = await prisma.user.findUnique({
+          where: { id: occupant.teacherId },
+          select: { name: true },
+        });
+        return NextResponse.json({
+          success: false,
+          message: `${holder?.name || 'Another Teacher'} is already assigned to ${normalizedName} (${normalizedCode}) — Group ${section}, Sem ${semesterNum}`,
+        }, { status: 400 });
+      }
+    }
 
-    const subject = existingSubject
+    const subject = target
       ? await prisma.subject.update({
-          where: { id: existingSubject.id },
-          data: { name: normalizedName, teacherId: teacher.id, isActive: true },
+          where: { id: target.id },
+          data: {
+            name: normalizedName,
+            code: normalizedCode,
+            semester: semesterNum,
+            section,
+            shift: normalizedShift,
+            teacherId: teacher.id,
+            isActive: true,
+          },
         })
       : await prisma.subject.create({
           data: {

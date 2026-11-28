@@ -7,11 +7,10 @@ import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 // Department Admin's own Subject list — read-only.
 //
 // The scoping is NOT done here: GET /api/subjects forces
-// `departmentId = auth.user.departmentId` AND `shift = auth.user.shift`
-// from the signed-in account *after* any query params, so this page only
-// ever receives the Subjects of its own Department and Shift no matter
-// what the URL says. Other departments' Subjects can never reach it.
-// Delete stays a Super Admin action (Admin Panel → Subjects).
+// `departmentId = auth.user.departmentId` from the signed-in account *after*
+// any query params, plus their own Shift or Subjects not yet placed in a
+// Shift (a fresh Subject has none). Other departments' Subjects can never
+// reach it. Delete stays a Super Admin action (Admin Panel → Subjects).
 export default function DepartmentAdminSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +23,13 @@ export default function DepartmentAdminSubjects() {
   }, []);
 
   // Group by Semester+Shift+Group, same reading order as the Admin page.
+  // A Subject not yet assigned to a Teacher has no slot yet — it gets its
+  // own section instead of rendering "Semester null".
   const groups = {};
   subjects.forEach(s => {
-    const key = `Semester ${s.semester} • ${formatShift(s.shift) || s.shift || '—'} Shift • Group ${s.section}`;
+    const key = s.semester
+      ? `Semester ${s.semester} • ${formatShift(s.shift) || s.shift || '—'} Shift • Group ${s.section}`
+      : 'Not placed yet (no Teacher assigned)';
     if (!groups[key]) groups[key] = [];
     groups[key].push(s);
   });

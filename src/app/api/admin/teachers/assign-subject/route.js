@@ -77,9 +77,12 @@ export async function POST(request) {
     }
     const normalizedShift = normalizeShift(requestedShift);
 
-    // A Subject+Group slot can only ever have one Teacher. A Subject left
-    // behind by a deleted Teacher is free to be reassigned.
-    const existingSubject = await prisma.subject.findFirst({
+    // Resolve the Subject row: one already in exactly this slot, else an
+    // UNPLACED Subject with the same Code (created via Create Subject with
+    // no Semester yet) whose slot is filled in by this assignment, else a
+    // new row below. This keeps "one row per Subject" true instead of
+    // duplicating the Subject the Admin created up front.
+    let existingSubject = await prisma.subject.findFirst({
       where: {
         code: normalizedCode,
         departmentId: teacher.departmentId,
@@ -89,6 +92,12 @@ export async function POST(request) {
       },
       select: { id: true, teacherId: true, name: true },
     });
+    if (!existingSubject) {
+      existingSubject = await prisma.subject.findFirst({
+        where: { code: normalizedCode, departmentId: teacher.departmentId, semester: null },
+        select: { id: true, teacherId: true, name: true },
+      });
+    }
     if (existingSubject?.teacherId && existingSubject.teacherId !== teacher.id) {
       const holder = await prisma.user.findUnique({
         where: { id: existingSubject.teacherId },
@@ -103,7 +112,14 @@ export async function POST(request) {
     const subject = existingSubject
       ? await prisma.subject.update({
           where: { id: existingSubject.id },
-          data: { name: normalizedName, teacherId: teacher.id, isActive: true },
+          data: {
+            name: normalizedName,
+            semester: semesterNum,
+            section,
+            shift: normalizedShift,
+            teacherId: teacher.id,
+            isActive: true,
+          },
         })
       : await prisma.subject.create({
           data: {

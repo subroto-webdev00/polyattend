@@ -140,9 +140,12 @@ model Subject {
   name         String
   code         String
   departmentId String  @map("department_id")
-  semester     Int
-  section      Section
-  shift        Shift
+  // A Subject is created with only Name + Code + Department (Admin Panel →
+  // Create Subject). Semester/Group/Shift are filled in later, when the
+  // Subject is assigned to a Teacher — so all three are optional here.
+  semester     Int?
+  section      Section?
+  shift        Shift?
   teacherId    String? @map("teacher_id")
   isActive     Boolean @default(true) @map("is_active")
 

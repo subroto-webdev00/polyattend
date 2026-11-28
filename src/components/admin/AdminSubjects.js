@@ -6,15 +6,13 @@ import Modal from '@/components/common/Modal';
 import toast from 'react-hot-toast';
 import { formatDepartment, formatShift, formatSubject } from '@/lib/display';
 
-// MISTAKE FIX: Admin could previously create/edit/delete Subjects
-// directly here, which bypassed the actual rule now in place — a Teacher
-// and their one Subject are only ever created together, by a Semester
-// Admin, through the invite flow. This page is now read-only apart from
-// Delete: it exists so Admin can see everything that exists, grouped by
-// Department, without being able to create a Subject with no Teacher
-// behind it. Delete sits behind a confirmation dialog (no accidental
-// clicks) and is a soft delete — the Subject vanishes from every list
-// while its Session/Attendance history stays in the database.
+// Admin's Subject directory: every Subject by Department, with a Create
+// button for making one (Name / Code / Department only — a Subject starts
+// unplaced and gets its Semester / Group / Shift when a Teacher is given
+// it through Assign Subject, which keeps the "one Subject = one Teacher"
+// rule in one place). Delete sits behind a confirmation dialog (no
+// accidental clicks) and is a soft delete — the Subject vanishes from
+// every list while its Session/Attendance history stays in the database.
 export default function AdminSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -22,6 +20,9 @@ export default function AdminSubjects() {
   const [filterDept, setFilterDept] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', code: '', departmentId: '' });
 
   const load = () => {
     setLoading(true);
@@ -52,24 +53,63 @@ export default function AdminSubjects() {
     }
   };
 
+  const setCreate = f => e => setCreateForm(p => ({ ...p, [f]: e.target.value }));
+
+  const handleCreate = async () => {
+    const name = createForm.name.trim();
+    const code = createForm.code.trim().toUpperCase();
+    if (!name) return toast.error('Enter Subject Name');
+    if (!code) return toast.error('Enter Subject Code');
+    if (!createForm.departmentId) return toast.error('Select a Department');
+
+    setCreating(true);
+    try {
+      const res = await api.post('/subjects', {
+        name,
+        code,
+        departmentId: createForm.departmentId,
+      });
+      toast.success(res.data.message || 'Subject created');
+      setCreateOpen(false);
+      setCreateForm({ name: '', code: '', departmentId: '' });
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || 'Could not create Subject');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   // Group subjects by Department first, then by Semester+Shift+Group
-  // within it, so the page reads as one section per department.
+  // within it, so the page reads as one section per department. Subjects
+  // created but not yet assigned to a Teacher have no slot yet and are
+  // collected under their own "not placed" section.
   const byDepartment = {};
   subjects.forEach(s => {
     const deptName = formatDepartment(s.departmentId, s.departmentCode) || 'Unknown Department';
     if (!byDepartment[deptName]) byDepartment[deptName] = {};
-    const subKey = `Semester ${s.semester} • ${formatShift(s.shift) || s.shift} Shift • Group ${s.section}`;
+    const subKey = s.semester
+      ? `Semester ${s.semester} • ${formatShift(s.shift) || s.shift} Shift • Group ${s.section}`
+      : 'Not placed yet (no Teacher assigned)';
     if (!byDepartment[deptName][subKey]) byDepartment[deptName][subKey] = [];
     byDepartment[deptName][subKey].push(s);
   });
 
   return (
     <div className="page">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 className="page-title">Subjects</h2>
           <p className="page-sub">All Subjects by Department ({subjects.length})</p>
         </div>
+        <button
+          type="button"
+          className="btn-primary"
+          style={{ width: 'auto', padding: '9px 18px' }}
+          onClick={() => setCreateOpen(true)}
+        >
+          <Icon name="plus" size={16} /> Create Subject
+        </button>
       </div>
 
       <div className="filter-bar">
@@ -123,6 +163,60 @@ export default function AdminSubjects() {
           </div>
         ))
       )}
+
+      {/* CREATE SUBJECT — only Name, Code and Department. The Subject starts
+          unplaced: Semester / Group / Shift are filled in when a Teacher is
+          given this Subject through Assign Subject. */}
+      <Modal open={createOpen} onClose={() => !creating && setCreateOpen(false)}>
+        <div className="modal-title">Create Subject</div>
+        <p style={{ fontSize: 12.5, color: 'var(--txt2)', margin: '2px 0 14px', lineHeight: 1.6 }}>
+          Create the Subject here, then assign it to a Teacher from the
+          Teachers page — the Teacher's Semester, Group and Shift are set
+          there.
+        </p>
+
+        <div className="form-group">
+          <label className="form-label">Subject Name *</label>
+          <input
+            className="form-input"
+            placeholder="e.g. Data Structure"
+            value={createForm.name}
+            onChange={setCreate('name')}
+            disabled={creating}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Subject Code *</label>
+          <input
+            className="form-input"
+            placeholder="e.g. CST-301"
+            value={createForm.code}
+            onChange={setCreate('code')}
+            disabled={creating}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Department *</label>
+          <select
+            className="form-select"
+            value={createForm.departmentId}
+            onChange={setCreate('departmentId')}
+            disabled={creating}
+          >
+            <option value="">— Select Department —</option>
+            {departments.map(d => (
+              <option key={d.id || d._id} value={d.id || d._id}>{d.name} ({d.code})</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="modal-footer">
+          <button type="button" className="btn-secondary" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</button>
+          <button type="button" className="btn-primary" onClick={handleCreate} disabled={creating}>
+            {creating ? <><div className="spinner spinner-sm" /> Creating...</> : 'Create Subject'}
+          </button>
+        </div>
+      </Modal>
 
       {/* Delete confirmation — always shown before the DELETE request goes
           out, so a stray click on the trash icon can never remove a Subject.

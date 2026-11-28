@@ -36,6 +36,12 @@ export default function TeacherManagement() {
   const [assignTarget, setAssignTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [assignForm, setAssignForm] = useState({ subjectName: '', subjectCode: '', semester: null, section: '', shift: '' });
+  // Subject picker: every Subject in this Department (GET /api/subjects is
+  // already scoped to the caller's own Department), as a plain list — no
+  // search, no manual typing. Subjects are created in the Admin Panel and
+  // picked here.
+  const [deptSubjects, setDeptSubjects] = useState([]);
+  const [pickedSubject, setPickedSubject] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -55,12 +61,31 @@ export default function TeacherManagement() {
     setAssignTarget(teacher);
     // Only asked when the Teacher has no shift yet; otherwise it is reused.
     setAssignForm({ subjectName: '', subjectCode: '', semester: null, section: '', shift: teacher?.shift || user?.shift || '' });
+    setPickedSubject(null);
+    // Refresh the Department's Subjects on every open (not cached): a
+    // Subject created in the Admin Panel since the last open must appear.
+    api.get('/subjects')
+      .then(r => setDeptSubjects(r.data.subjects || []))
+      .catch(() => {}); // non-fatal — the list simply stays empty
+  };
+
+  // Clicking a Subject in the list fills Name/Code at once; Semester/Group/
+  // Shift come from the pickers below (prefilled when the Subject already
+  // has a slot from a previous assignment).
+  const pickSubject = (s) => {
+    setPickedSubject(s);
+    setAssignForm(p => ({
+      ...p,
+      subjectName: s.name || '',
+      subjectCode: s.code || '',
+      semester: s.semester || p.semester,
+      section: s.section || p.section,
+      shift: s.shift || p.shift,
+    }));
   };
 
   const handleAssign = async () => {
-    if (!assignForm.subjectName.trim() || !assignForm.subjectCode.trim()) {
-      return toast.error('Enter Subject Name and Subject Code');
-    }
+    if (!pickedSubject) return toast.error('Select a Subject from the list');
     if (!assignForm.semester) return toast.error('Select a Semester');
     if (!assignForm.section) return toast.error('Select a Group');
     if (!assignTarget?.shift && !assignForm.shift) return toast.error('Select a Shift');
@@ -69,8 +94,9 @@ export default function TeacherManagement() {
     try {
       const res = await api.post('/departmentAdmin/teachers/assign-subject', {
         teacherId: getRecordId(assignTarget),
-        subjectName: assignForm.subjectName,
-        subjectCode: assignForm.subjectCode,
+        subjectId: getRecordId(pickedSubject),
+        subjectName: pickedSubject.name,
+        subjectCode: pickedSubject.code,
         semester: assignForm.semester,
         section: assignForm.section,
         shift: assignForm.shift || assignTarget?.shift || '',
@@ -193,13 +219,46 @@ export default function TeacherManagement() {
           </div>
         )}
 
+        {/* SUBJECT LIST — every Subject created in the Admin Panel for this
+            Department, as a plain list (no search, no manual typing). Picking
+            one fills Name/Code; Semester/Group/Shift are chosen with the
+            pickers below. */}
         <div className="form-group">
-          <label className="form-label">Subject Name *</label>
-          <input className="form-input" placeholder="e.g. Data Structure" value={assignForm.subjectName} onChange={setAssign('subjectName')} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Subject Code *</label>
-          <input className="form-input" placeholder="e.g. CST-301" value={assignForm.subjectCode} onChange={setAssign('subjectCode')} />
+          <label className="form-label">Select a Subject *</label>
+
+          {deptSubjects.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--txt3)', padding: '6px 2px' }}>
+              No Subjects in your Department yet — an Admin creates them in the Admin Panel.
+            </div>
+          ) : (
+            <div style={{
+              maxHeight: 190, overflowY: 'auto', border: '1px solid var(--border2)',
+              borderRadius: 10, padding: 6, display: 'grid', gap: 4,
+            }}>
+              {deptSubjects.map(s => {
+                const active = pickedSubject && getRecordId(pickedSubject) === getRecordId(s);
+                return (
+                  <button
+                    key={getRecordId(s)}
+                    type="button"
+                    onClick={() => pickSubject(s)}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      gap: 8, padding: '8px 10px', borderRadius: 8, textAlign: 'left',
+                      border: active ? '2px solid var(--primary)' : '2px solid transparent',
+                      background: active ? 'var(--primary-light)' : 'var(--bg)',
+                      color: 'var(--txt)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700 }}>{s.name}</span>
+                    <span style={{ color: 'var(--txt2)', fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                      {s.code}{s.semester ? ` • Sem ${s.semester} • Grp ${s.section}` : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
